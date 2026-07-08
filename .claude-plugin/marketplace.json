@@ -1,0 +1,22 @@
+{
+	"name": "reclaim",
+	"owner": {
+		"name": "Reclaim Protocol",
+		"email": "support@reclaimprotocol.org",
+		"url": "https://reclaimprotocol.org"
+	},
+	"metadata": {
+		"description": "Reclaim Protocol tools for Claude Code — zkTLS provider authoring, capture, and proof.",
+		"version": "0.1.9"
+	},
+	"plugins": [
+		{
+			"name": "reclaim",
+			"source": "./reclaim",
+			"description": "Author, capture, and prove Reclaim zkTLS providers from Claude Code. Bundles the reclaim MCP server (Chrome capture → provider synthesis → replay → proof → publish); its how_it_works tool serves the full authoring guide.",
+			"version": "0.1.9",
+			"category": "development",
+			"keywords": ["mcp", "data", "verification", "zktls", "reclaim", "provider-authoring", "zero-knowledge"]
+		}
+	]
+}

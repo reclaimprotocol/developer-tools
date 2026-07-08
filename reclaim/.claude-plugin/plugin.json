@@ -1,0 +1,15 @@
+{
+	"name": "reclaim",
+	"description": "Author, capture, and prove Reclaim zkTLS providers from Claude Code. Bundles the reclaim MCP server.",
+	"version": "0.1.9",
+	"author": {
+		"name": "Reclaim Protocol",
+		"email": "support@reclaimprotocol.org",
+		"url": "https://reclaimprotocol.org"
+	},
+	"homepage": "https://docs.reclaimprotocol.org",
+	"repository": "https://github.com/reclaimprotocol/developer-tools",
+	"license": "MIT",
+	"keywords": ["mcp", "data", "verification", "zktls", "reclaim", "provider-authoring", "zero-knowledge"],
+	"mcpServers": "./.mcp.json"
+}

@@ -1,0 +1,8 @@
+{
+	"mcpServers": {
+		"reclaim": {
+			"command": "npx",
+			"args": ["-y", "--package=@reclaimprotocol/agent", "reclaim-mcp-server"]
+		}
+	}
+}
