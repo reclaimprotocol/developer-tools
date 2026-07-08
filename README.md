@@ -23,8 +23,8 @@ npx -y --package=@reclaimprotocol/agent reclaim-mcp-server
 **install the plugin from the marketplace**:
 
 ```
-/plugin marketplace add reclaimprotocol/developer-tools
-/plugin install reclaim@reclaim
+claude plugin marketplace add reclaimprotocol/developer-tools
+claude plugin install reclaim@reclaim
 ```
 
 Prefer this over the manual `claude mcp add` below unless you have a specific reason not to.
