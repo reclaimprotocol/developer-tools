@@ -6,12 +6,9 @@ Installation and Claude Code marketplace for the **Reclaim MCP server** — the 
 
 The server itself is published to npm as [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) (bin: `reclaim-mcp-server`); this repo carries the Claude Code plugin/marketplace and the install instructions for every client.
 
-> The badge above jumps to the install commands — Claude Code has **no official one-click install button or deep link** for plugins, so installing is the two `/plugin …` commands below.
-
 ## Prerequisites
 
-- **Node ≥ 20** — works best on a current **LTS** release (22 or 24). Any Node ≥ 20 works, including non-LTS lines like 25; LTS is only *recommended*.
-- A local **Chrome / Chromium / Edge** (used for capture and the dashboard login).
+- **Node ≥ 20** — works best on a current **LTS** release (22 or 24).
 
 The first time you run a proof, the server downloads the ZK circuit files it needs (~280 MB) — allow a moment for that first proof. The download is deferred to first proof on purpose (not an install step), so the MCP server itself starts immediately.
 
@@ -21,11 +18,9 @@ It runs as a **stdio MCP server**. Point any MCP-capable agent at this command:
 npx -y --package=@reclaimprotocol/agent reclaim-mcp-server
 ```
 
-> The `--package=` (short form `-p`) flag selects the `reclaim-mcp-server` binary from the package. We use the long `--package=` form throughout because the short `-p` collides with the `-p`/`--print` flag of some agent CLIs (notably `claude mcp add`), which silently swallows the command. Prefer a global install? Run `npm i -g @reclaimprotocol/agent` and use `reclaim-mcp-server` directly as the `command` (drop the `npx` wrapper and its `args`).
-
 ## Claude Code
 
-**Recommended — install the plugin from the marketplace** (no `claude mcp add`, no `-p` collision; the server's `how_it_works` tool serves the authoring guide on demand):
+**install the plugin from the marketplace**:
 
 ```
 /plugin marketplace add reclaimprotocol/developer-tools
@@ -37,8 +32,8 @@ Prefer this over the manual `claude mcp add` below unless you have a specific re
 **Advanced / fallback — add the MCP server directly** (skip if you used the plugin above):
 
 ```bash
-# project scope → writes .mcp.json; add `-s user` for a global install
-claude mcp add reclaim -- npx -y --package=@reclaimprotocol/agent reclaim-mcp-server
+# `-s user` installs this for your user
+claude mcp add reclaim -s user -- npx -y --package=@reclaimprotocol/agent reclaim-mcp-server
 ```
 
 …or add it to `.mcp.json` yourself:
@@ -54,29 +49,7 @@ claude mcp add reclaim -- npx -y --package=@reclaimprotocol/agent reclaim-mcp-se
 }
 ```
 
-## Claude Desktop (macOS / Windows app)
-
-Claude Desktop is the standalone consumer app — **separate from Claude Code**, and it does **not** support the plugin marketplace (`/plugin …` is Claude Code only). Configure the MCP server manually via its config file:
-
-- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
-
-Edit it (via **Settings → Developer → Edit Config**, or open the file directly) and add:
-
-```json
-{
-  "mcpServers": {
-    "reclaim": {
-      "command": "npx",
-      "args": ["-y", "--package=@reclaimprotocol/agent", "reclaim-mcp-server"]
-    }
-  }
-}
-```
-
-Then **fully quit and reopen** Claude Desktop (a window close is not enough) so it re-reads the config and starts the server.
-
-> **Node must be on the app's PATH.** Claude Desktop launches the server as a subprocess using the environment it inherits at startup — it does **not** bundle Node. If the server shows as failed, either install Node ≥ 20 and relaunch, or set `"command"` to an **absolute path** to `npx`/`node` (find it with `which npx`), since GUI-launched apps sometimes get a minimal PATH. Chrome capture works the same as anywhere else.
+If you are using Claude desktop, then **fully quit and reopen** it (a window close is not enough) so it re-reads the config and starts the server.
 
 ## Cursor
 
