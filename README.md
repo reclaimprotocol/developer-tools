@@ -1,8 +1,12 @@
 # Reclaim developer tools
 
-Installation and Claude Code marketplace for the **Reclaim MCP server** — Chrome-CDP + zkTLS provider-authoring tools. The server captures network traffic from a browser, synthesizes Reclaim provider definitions (`contains` matchers + `jsonPath` / `xPath` / `regex` redactions), runs a local replay diagnostic, and produces a verified attestor proof.
+[![Add to Claude Code](https://img.shields.io/badge/Add%20to-Claude%20Code-D97757?style=for-the-badge&logo=anthropic&logoColor=white)](#claude-code)
+
+Installation and Claude Code marketplace for the **Reclaim MCP server** — the tools that helps you use Reclaim Protocol to let your app verify **data points** about its users (a follower count, an account balance, an order history). Gives your AI coding agent the tools to **find, build, test and fix the _data verification providers_** (the recipes that verify a data point) by inspecting and replaying captured requests, checking sessions, evaluate proofs, publishing updates, and much more.
 
 The server itself is published to npm as [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) (bin: `reclaim-mcp-server`); this repo carries the Claude Code plugin/marketplace and the install instructions for every client.
+
+> The badge above jumps to the install commands — Claude Code has **no official one-click install button or deep link** for plugins, so installing is the two `/plugin …` commands below.
 
 ## Prerequisites
 
