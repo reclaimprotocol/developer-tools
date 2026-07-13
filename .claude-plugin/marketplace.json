@@ -7,14 +7,14 @@
 	},
 	"metadata": {
 		"description": "Reclaim Protocol tools for Claude Code — verify data points about your users (followers, balances, orders, …) with Reclaim Protocol by finding, building, testing and fixing data verification providers.",
-		"version": "0.1.11"
+		"version": "0.1.12"
 	},
 	"plugins": [
 		{
 			"name": "reclaim",
 			"source": "./reclaim",
 			"description": "Author, test and fix data verification providers that can be used to prove data points about your users with Reclaim Protocol, from Claude Code — find, build, test and fix the providers that do the verifying, check sessions, and run zkTLS proofs. Bundles the reclaim MCP server; its how_it_works tool serves the full authoring guide.",
-			"version": "0.1.11",
+			"version": "0.1.12",
 			"category": "development",
 			"keywords": ["mcp", "data", "verification", "zktls", "reclaim", "provider-authoring", "zero-knowledge"]
 		}

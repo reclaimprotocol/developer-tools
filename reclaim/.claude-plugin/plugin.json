@@ -1,7 +1,7 @@
 {
 	"name": "reclaim",
 	"description": "Author, test and fix data verification providers that can be used to prove data points about your users with Reclaim Protocol, from Claude Code — find, build, test and fix the providers that do the verifying, check sessions, and run zkTLS proofs. Bundles the reclaim MCP server; its how_it_works tool serves the full authoring guide.",
-	"version": "0.1.11",
+	"version": "0.1.12",
 	"author": {
 		"name": "Reclaim Protocol",
 		"email": "support@reclaimprotocol.org",
