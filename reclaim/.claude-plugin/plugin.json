@@ -1,7 +1,7 @@
 {
 	"name": "reclaim",
 	"description": "Build and maintain Reclaim Protocol data verification providers from your editor: capture a site's network traffic, synthesize a provider recipe, replay it, run a zkTLS proof, and publish it. Also inspects verification sessions and diagnoses failed ones. Use when verifying a data point about a user — a follower count, an account balance, an order history. Bundles the Reclaim MCP server, whose how_it_works tool serves the authoring guide one topic at a time.",
-	"version": "0.1.27",
+	"version": "0.1.28",
 	"author": {
 		"name": "Reclaim Protocol",
 		"email": "support@reclaimprotocol.org",
