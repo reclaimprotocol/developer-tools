@@ -1,0 +1,29 @@
+{
+	"name": "reclaim",
+	"version": "0.1.31",
+	"description": "Build and maintain Reclaim Protocol data verification providers from your editor: capture a site's network traffic, synthesize a provider recipe, replay it, run a zkTLS proof, and publish it. Also inspects verification sessions and diagnoses failed ones. Use when verifying a data point about a user — a follower count, an account balance, an order history. Bundles the Reclaim MCP server, whose how_it_works tool serves the authoring guide one topic at a time.",
+	"author": {
+		"name": "Reclaim Protocol",
+		"email": "support@reclaimprotocol.org",
+		"url": "https://reclaimprotocol.org"
+	},
+	"homepage": "https://docs.reclaimprotocol.org",
+	"repository": "https://github.com/reclaimprotocol/developer-tools",
+	"license": "MIT",
+	"keywords": ["mcp", "data", "verification", "zktls", "reclaim", "provider-authoring", "zero-knowledge"],
+	"mcpServers": "./.mcp.json",
+	"interface": {
+		"displayName": "Reclaim Protocol",
+		"shortDescription": "Build, test, and fix Reclaim data verification providers",
+		"longDescription": "Verify data points about your users, such as a follower count, an account balance, or an order history. The Reclaim MCP server captures a site's network traffic, synthesizes a provider, replays it, runs a zkTLS proof, and publishes it. It also sets up your organization, tokens, and callbacks, and diagnoses failed verification sessions.",
+		"developerName": "Reclaim Protocol",
+		"category": "Developer Tools",
+		"capabilities": ["Interactive", "Read", "Write"],
+		"websiteURL": "https://reclaimprotocol.org",
+		"defaultPrompt": [
+			"Use Reclaim to create a provider that proves my GitHub follower count",
+			"Set up Reclaim verification in this app",
+			"Find out why my latest Reclaim verification session failed"
+		]
+	}
+}

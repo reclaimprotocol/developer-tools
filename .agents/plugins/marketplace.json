@@ -1,0 +1,20 @@
+{
+	"name": "reclaim",
+	"interface": {
+		"displayName": "Reclaim Protocol"
+	},
+	"plugins": [
+		{
+			"name": "reclaim",
+			"source": {
+				"source": "local",
+				"path": "./reclaim"
+			},
+			"policy": {
+				"installation": "AVAILABLE",
+				"authentication": "ON_USE"
+			},
+			"category": "Developer Tools"
+		}
+	]
+}

@@ -1,12 +1,13 @@
 # Reclaim developer tools
 
 [![Add to Claude Code](https://img.shields.io/badge/Add%20to-Claude%20Code-D97757?style=for-the-badge&logo=anthropic&logoColor=white)](#claude-code)
+[![Add to Codex](https://img.shields.io/badge/Add%20to-Codex-000000?style=for-the-badge&logo=openai&logoColor=white)](#codex)
 
 Install the **Reclaim MCP server** into your AI coding agent.
 
 Reclaim Protocol lets your app verify **data points** about its users — a follower count, an account balance, an order history. The MCP server gives your agent the tools to find, build, test, and fix the **data verification providers** that do the verifying: it inspects and replays captured requests, checks verification sessions, evaluates proofs, and publishes provider updates.
 
-The server is published to npm as [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) (bin: `reclaim-mcp-server`). This repository carries the Claude Code plugin and marketplace, plus install instructions for every other client.
+The server is published to npm as [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) (bin: `reclaim-mcp-server`). This repository carries the Claude Code and Codex plugins and marketplaces, plus install instructions for every other client.
 
 ## Contents
 
@@ -107,6 +108,17 @@ Add to `opencode.json` (project) or `~/.config/opencode/opencode.json` (global):
 
 ## Codex
 
+Install the plugin from the marketplace:
+
+```bash
+codex plugin marketplace add reclaimprotocol/developer-tools
+codex plugin add reclaim@reclaim
+```
+
+To pick up a newer plugin version later, run `codex plugin marketplace upgrade reclaim`.
+
+**Advanced fallback — add the MCP server directly.** Skip this if you installed the plugin:
+
 ```bash
 # writes ~/.codex/config.toml
 codex mcp add reclaim -- npx -y --package=@reclaimprotocol/agent reclaim-mcp-server
@@ -137,15 +149,15 @@ These all use the standard `mcpServers` shape. Add a server through the app's MC
 
 ## Optional environment
 
-The defaults target the production backend, so **the common case needs no environment at all**. To override something, add an `env` block — `environment` in opencode — to the config above:
+The defaults target Builder, so **the common case needs no environment at all**. To opt into legacy devtools, add an `env` block — `environment` in opencode — to the config above:
 
 ```json
 "env": {
-  "RECLAIM_OLD_API_URL": "https://devapi.reclaimprotocol.org"
+  "USE_OLD_DEVTOOLS": "true"
 }
 ```
 
-To switch backends, set `USE_OLD_DEVTOOLS=false` for builder mode. For the full list of variables, see the [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) package docs.
+To switch back to Builder, remove the override or set `USE_OLD_DEVTOOLS=false`. For the full list of variables, see the [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) package docs.
 
 ## Using it from your agent
 
@@ -160,26 +172,37 @@ The agent orchestrates authentication, browser capture, provider synthesis, repl
 ## Maintaining this repository
 
 ```
-.claude-plugin/marketplace.json   Marketplace metadata + the plugin entry
-reclaim/.claude-plugin/plugin.json  The plugin manifest
-reclaim/.mcp.json                 The stdio command the plugin runs
-scripts/sync-version.ts           Version sync (below)
+.claude-plugin/marketplace.json     Claude marketplace metadata + the plugin entry
+.agents/plugins/marketplace.json    Codex marketplace + the plugin entry
+reclaim/.claude-plugin/plugin.json  Claude plugin manifest
+reclaim/.codex-plugin/plugin.json   Codex plugin manifest
+reclaim/.mcp.json                   The stdio command both plugins run
+scripts/sync-version.ts             Version sync (below)
 ```
 
-The plugin runs the published [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) through `npx`, so the version in the manifests tracks that package rather than anything in this repository. To sync it:
+Both plugins run the published [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) through `npx`, so the version in the manifests tracks that package rather than anything in this repository. To sync it (Node 22.18 or later):
 
 ```bash
-node scripts/sync-version.ts          # use the latest @reclaimprotocol/agent on npm
-node scripts/sync-version.ts 0.2.0    # or set an explicit version
+npm run sync-version            # use the latest @reclaimprotocol/agent on npm
+npm run sync-version -- 0.2.0   # or set an explicit version
 ```
 
-It rewrites every `version` field in `.claude-plugin/marketplace.json` (both the marketplace metadata and the plugin entry) and in `reclaim/.claude-plugin/plugin.json`, preserving each file's formatting.
+It rewrites every `version` field in `.claude-plugin/marketplace.json` (both the marketplace metadata and the plugin entry), `reclaim/.claude-plugin/plugin.json`, and `reclaim/.codex-plugin/plugin.json`, preserving each file's formatting. The Codex marketplace has no version field.
 
 Run this **after** bumping the version in the [builder](https://github.com/reclaimprotocol/builder) monorepo and publishing the package — the npm lookup only finds a version that already exists.
 
 Validate the manifests before committing:
 
 ```bash
-claude plugin validate .          # marketplace manifest
-claude plugin validate ./reclaim  # plugin manifest
+claude plugin validate .          # Claude marketplace manifest
+claude plugin validate ./reclaim  # Claude plugin manifest
+```
+
+Codex has no validate command. Install from your checkout in a throwaway Codex home instead:
+
+```bash
+export CODEX_HOME="$(mktemp -d)"
+codex plugin marketplace add "$PWD"
+codex plugin add reclaim@reclaim
+codex mcp list                    # lists the reclaim server
 ```

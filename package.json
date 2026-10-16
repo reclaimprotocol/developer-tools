@@ -1,0 +1,11 @@
+{
+	"name": "@reclaimprotocol/developer-tools",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"sync-version": "node scripts/sync-version.ts"
+	},
+	"engines": {
+		"node": ">=22.18"
+	}
+}
