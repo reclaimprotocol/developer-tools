@@ -10,8 +10,8 @@ import { fileURLToPath } from 'url'
  * just runs `npx @reclaimprotocol/agent`, so the source of truth is that
  * package's published version — fetched from npm by default:
  *
- *   node scripts/sync-version.ts            # use latest @reclaimprotocol/agent from npm
- *   node scripts/sync-version.ts 0.2.0      # set an explicit version instead
+ *   npm run sync-version             # use latest @reclaimprotocol/agent from npm
+ *   npm run sync-version -- 0.2.0    # set an explicit version instead
  *
  * Only the `version` field values are rewritten (targeted string replace), so
  * each file keeps its existing formatting.
@@ -20,12 +20,14 @@ import { fileURLToPath } from 'url'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PACKAGE = '@reclaimprotocol/agent'
 
-// Files that carry a version, relative to the repo root. `marketplace.json`
-// holds two `version` keys (marketplace metadata + the plugin entry); both are
-// set, along with the plugin manifest.
+// Files that carry a version, relative to the repo root. The Claude
+// `marketplace.json` holds two `version` keys (marketplace metadata + the
+// plugin entry); both are set. The Codex marketplace has no version, so only
+// its plugin manifest is listed.
 const TARGETS = [
 	'.claude-plugin/marketplace.json',
 	'reclaim/.claude-plugin/plugin.json',
+	'reclaim/.codex-plugin/plugin.json',
 ]
 
 const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
