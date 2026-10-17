@@ -27,11 +27,13 @@ const PACKAGE = '@reclaimprotocol/agent'
 const TARGETS = [
 	'.claude-plugin/marketplace.json',
 	'.cursor-plugin/marketplace.json',
+	'.github/plugin/marketplace.json',
 	'.omp-plugin/marketplace.json',
 	'plugin.json',
 	'reclaim/.claude-plugin/plugin.json',
 	'reclaim/.codex-plugin/plugin.json',
 	'reclaim/.cursor-plugin/plugin.json',
+	'reclaim/.github/plugin/plugin.json',
 ]
 
 const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/

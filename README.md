@@ -82,7 +82,7 @@ Add the same `mcpServers` entry through the app's MCP settings, then **fully qui
 
 ## GitHub Copilot / VS Code
 
-GitHub Copilot recognizes the Claude-compatible marketplace already included in this repository. Install it from Copilot CLI:
+This repository includes a native GitHub Copilot marketplace and plugin. Install it from Copilot CLI:
 
 ```bash
 copilot plugin marketplace add reclaimprotocol/developer-tools
@@ -250,15 +250,17 @@ The agent orchestrates authentication, browser capture, provider synthesis, repl
 ## Maintaining this repository
 
 ```
-.claude-plugin/marketplace.json     Claude and GitHub Copilot marketplace metadata
+.claude-plugin/marketplace.json     Claude marketplace metadata + the plugin entry
 .agents/plugins/marketplace.json    Codex marketplace + the plugin entry
 .cursor-plugin/marketplace.json     Cursor marketplace metadata + the plugin entry
+.github/plugin/marketplace.json     GitHub Copilot marketplace metadata + plugin entry
 .omp-plugin/marketplace.json        OMP marketplace metadata + the plugin entry
 plugin.json                         Antigravity plugin manifest
 mcp_config.json                     Antigravity MCP configuration
-reclaim/.claude-plugin/plugin.json  Claude and GitHub Copilot plugin manifest
+reclaim/.claude-plugin/plugin.json  Claude plugin manifest
 reclaim/.codex-plugin/plugin.json   Codex plugin manifest
 reclaim/.cursor-plugin/plugin.json  Cursor plugin manifest
+reclaim/.github/plugin/plugin.json  GitHub Copilot plugin manifest
 reclaim/.mcp.json                   The shared stdio command used by marketplace plugins
 scripts/sync-version.ts             Version sync (below)
 ```
@@ -270,7 +272,7 @@ npm run sync-version            # use the latest @reclaimprotocol/agent on npm
 npm run sync-version -- 0.2.0   # or set an explicit version
 ```
 
-It rewrites every `version` field in the Claude, Cursor, and OMP marketplace catalogs, the Antigravity manifest, and each versioned client plugin manifest while preserving file formatting. The Codex marketplace has no version field.
+It rewrites every `version` field in the Claude, Cursor, GitHub Copilot, and OMP marketplace catalogs, the Antigravity manifest, and each versioned client plugin manifest while preserving file formatting. The Codex marketplace has no version field.
 
 Run this **after** bumping the version in the [builder](https://github.com/reclaimprotocol/builder) monorepo and publishing the package — the npm lookup only finds a version that already exists.
 

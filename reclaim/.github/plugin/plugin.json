@@ -1,0 +1,15 @@
+{
+	"name": "reclaim",
+	"version": "0.1.32",
+	"description": "Build and maintain Reclaim Protocol data verification providers from your editor: capture a site's network traffic, synthesize a provider recipe, replay it, run a zkTLS proof, and publish it. Also inspects verification sessions and diagnoses failed ones.",
+	"author": {
+		"name": "Reclaim Protocol",
+		"email": "support@reclaimprotocol.org",
+		"url": "https://reclaimprotocol.org"
+	},
+	"homepage": "https://docs.reclaimprotocol.org",
+	"repository": "https://github.com/reclaimprotocol/developer-tools",
+	"license": "MIT",
+	"keywords": ["mcp", "data", "verification", "zktls", "reclaim", "provider-authoring", "zero-knowledge"],
+	"mcpServers": "./.mcp.json"
+}
