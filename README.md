@@ -228,18 +228,6 @@ These all use the standard `mcpServers` shape. Add a server through the app's MC
 }
 ```
 
-## Optional environment
-
-The defaults target Builder, so **the common case needs no environment at all**. To opt into legacy devtools, add an `env` block — `environment` in opencode — to the config above:
-
-```json
-"env": {
-  "USE_OLD_DEVTOOLS": "true"
-}
-```
-
-To switch back to Builder, remove the override or set `USE_OLD_DEVTOOLS=false`. For the full list of variables, see the [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) package docs.
-
 ## Using it from your agent
 
 The MCP server is all you need. It ships a `how_it_works` tool that serves the capture → prove → publish guide **one topic at a time** — login detection, choosing an authentication-bound endpoint, the OPRF privacy decision, publishing, troubleshooting. Call it with no arguments for the overview and the topic index, then again for the topic you need.
