@@ -30,7 +30,7 @@ The server is published to npm as [`@reclaimprotocol/agent`](https://www.npmjs.c
 
 ## Prerequisites
 
-- **Node 20 or later.** Any line works, but a current LTS line (22, 24, or 26) is recommended.
+- **Node 22 or later.** This matches the `>=22.0.0` engine requirement of the published `@reclaimprotocol/agent` package. A current LTS line is recommended.
 - **A local Chrome, Chromium, or Edge.** The server drives a real browser to capture traffic and to sign you in.
 
 The first time you run a proof, the server downloads the ZK circuit files it needs, about 280 MB. Allow a moment for that first proof. The download is deferred to the first proof rather than run at install time, so the server itself starts immediately.
@@ -96,13 +96,16 @@ copilot plugin marketplace update reclaim
 copilot plugin update reclaim
 ```
 
-In VS Code, add this repository to the `chat.plugins.marketplaces` setting:
+In VS Code, enable agent plugins and add this repository to the `chat.plugins.marketplaces` setting:
 
 ```json
-"chat.plugins.marketplaces": ["reclaimprotocol/developer-tools"]
+{
+  "chat.plugins.enabled": true,
+  "chat.plugins.marketplaces": ["reclaimprotocol/developer-tools"]
+}
 ```
 
-Then run **Chat: Open Customizations**, open **Plugins**, and install `reclaim` from the `reclaim` marketplace. VS Code's agent-plugin marketplace is currently experimental.
+Then run **Chat: Open Customizations**, open **Plugins**, select **Browse Marketplace**, and install `reclaim` from the `reclaim` marketplace. To use VS Code's unified experimental **Discover** view instead, also enable `chat.customizations.marketplace.enabled`.
 
 ## Cursor
 
