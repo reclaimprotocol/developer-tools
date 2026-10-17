@@ -2,6 +2,7 @@
 
 [![Add to Claude Code](https://img.shields.io/badge/Add%20to-Claude%20Code-D97757?style=for-the-badge&logo=anthropic&logoColor=white)](#claude-code)
 [![Add to Codex](https://img.shields.io/badge/Add%20to-Codex-000000?style=for-the-badge&logo=openai&logoColor=white)](#codex)
+[![Add to GitHub Copilot](https://img.shields.io/badge/Add%20to-GitHub%20Copilot-000000?style=for-the-badge&logo=githubcopilot&logoColor=white)](#github-copilot--vs-code)
 [![Add to Cursor](https://img.shields.io/badge/Add%20to-Cursor-000000?style=for-the-badge&logo=cursor&logoColor=white)](#cursor)
 [![Add to OMP](https://img.shields.io/badge/Add%20to-OMP-5B5BD6?style=for-the-badge)](#omp)
 
@@ -16,12 +17,13 @@ The server is published to npm as [`@reclaimprotocol/agent`](https://www.npmjs.c
 - [Prerequisites](#prerequisites)
 - [Claude Code](#claude-code)
 - [Claude Desktop](#claude-desktop)
+- [GitHub Copilot / VS Code](#github-copilot--vs-code)
 - [Cursor](#cursor)
 - [OMP](#omp)
 - [OpenCode](#opencode)
 - [Codex](#codex)
 - [Antigravity](#antigravity)
-- [Windsurf, VS Code, Cline, and other MCP clients](#windsurf-vs-code-cline-and-other-mcp-clients)
+- [Windsurf, Cline, and other MCP clients](#windsurf-cline-and-other-mcp-clients)
 - [Optional environment](#optional-environment)
 - [Using it from your agent](#using-it-from-your-agent)
 - [Maintaining this repository](#maintaining-this-repository)
@@ -77,6 +79,30 @@ Run `/mcp` inside Claude Code to confirm the server connected.
 ## Claude Desktop
 
 Add the same `mcpServers` entry through the app's MCP settings, then **fully quit and reopen** Claude Desktop. Closing the window is not enough — it re-reads the config only on a full restart.
+
+## GitHub Copilot / VS Code
+
+GitHub Copilot recognizes the Claude-compatible marketplace already included in this repository. Install it from Copilot CLI:
+
+```bash
+copilot plugin marketplace add reclaimprotocol/developer-tools
+copilot plugin install reclaim@reclaim
+```
+
+To pick up a newer version later, run:
+
+```bash
+copilot plugin marketplace update reclaim
+copilot plugin update reclaim
+```
+
+In VS Code, add this repository to the `chat.plugins.marketplaces` setting:
+
+```json
+"chat.plugins.marketplaces": ["reclaimprotocol/developer-tools"]
+```
+
+Then run **Chat: Open Customizations**, open **Plugins**, and install `reclaim` from the `reclaim` marketplace. VS Code's agent-plugin marketplace is currently experimental.
 
 ## Cursor
 
@@ -184,7 +210,7 @@ agy plugin install https://github.com/reclaimprotocol/developer-tools
 
 Antigravity currently supports only its curated official marketplace, not third-party marketplace catalogs. This repository includes the root `plugin.json` and `mcp_config.json` needed for direct GitHub installation and is ready to submit through [Antigravity's marketplace interest form](https://forms.gle/2EX5RFYPoJe1UgxR9). Until it is accepted into the official catalog, update a direct install by reinstalling it from the GitHub URL.
 
-## Windsurf, VS Code, Cline, and other MCP clients
+## Windsurf, Cline, and other MCP clients
 
 These all use the standard `mcpServers` shape. Add a server through the app's MCP settings, or its `mcp`/`mcpServers` config file, with:
 
@@ -224,13 +250,13 @@ The agent orchestrates authentication, browser capture, provider synthesis, repl
 ## Maintaining this repository
 
 ```
-.claude-plugin/marketplace.json     Claude marketplace metadata + the plugin entry
+.claude-plugin/marketplace.json     Claude and GitHub Copilot marketplace metadata
 .agents/plugins/marketplace.json    Codex marketplace + the plugin entry
 .cursor-plugin/marketplace.json     Cursor marketplace metadata + the plugin entry
 .omp-plugin/marketplace.json        OMP marketplace metadata + the plugin entry
 plugin.json                         Antigravity plugin manifest
 mcp_config.json                     Antigravity MCP configuration
-reclaim/.claude-plugin/plugin.json  Claude plugin manifest
+reclaim/.claude-plugin/plugin.json  Claude and GitHub Copilot plugin manifest
 reclaim/.codex-plugin/plugin.json   Codex plugin manifest
 reclaim/.cursor-plugin/plugin.json  Cursor plugin manifest
 reclaim/.mcp.json                   The shared stdio command used by marketplace plugins
