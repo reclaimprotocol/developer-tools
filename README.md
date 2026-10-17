@@ -2,12 +2,14 @@
 
 [![Add to Claude Code](https://img.shields.io/badge/Add%20to-Claude%20Code-D97757?style=for-the-badge&logo=anthropic&logoColor=white)](#claude-code)
 [![Add to Codex](https://img.shields.io/badge/Add%20to-Codex-000000?style=for-the-badge&logo=openai&logoColor=white)](#codex)
+[![Add to Cursor](https://img.shields.io/badge/Add%20to-Cursor-000000?style=for-the-badge&logo=cursor&logoColor=white)](#cursor)
+[![Add to OMP](https://img.shields.io/badge/Add%20to-OMP-5B5BD6?style=for-the-badge)](#omp)
 
 Install the **Reclaim MCP server** into your AI coding agent.
 
 Reclaim Protocol lets your app verify **data points** about its users — a follower count, an account balance, an order history. The MCP server gives your agent the tools to find, build, test, and fix the **data verification providers** that do the verifying: it inspects and replays captured requests, checks verification sessions, evaluates proofs, and publishes provider updates.
 
-The server is published to npm as [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) (bin: `reclaim-mcp-server`). This repository carries the Claude Code and Codex plugins and marketplaces, plus install instructions for every other client.
+The server is published to npm as [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) (bin: `reclaim-mcp-server`). This repository carries plugins and marketplaces for clients that support them, plus direct install instructions for every other client.
 
 ## Contents
 
@@ -15,9 +17,11 @@ The server is published to npm as [`@reclaimprotocol/agent`](https://www.npmjs.c
 - [Claude Code](#claude-code)
 - [Claude Desktop](#claude-desktop)
 - [Cursor](#cursor)
-- [opencode](#opencode)
+- [OMP](#omp)
+- [OpenCode](#opencode)
 - [Codex](#codex)
-- [Antigravity, Windsurf, VS Code, Cline, and other MCP clients](#antigravity-windsurf-vs-code-cline-and-other-mcp-clients)
+- [Antigravity](#antigravity)
+- [Windsurf, VS Code, Cline, and other MCP clients](#windsurf-vs-code-cline-and-other-mcp-clients)
 - [Optional environment](#optional-environment)
 - [Using it from your agent](#using-it-from-your-agent)
 - [Maintaining this repository](#maintaining-this-repository)
@@ -76,7 +80,17 @@ Add the same `mcpServers` entry through the app's MCP settings, then **fully qui
 
 ## Cursor
 
-Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project):
+This repository is a Cursor marketplace. Add it from the Cursor CLI:
+
+```bash
+agent plugin marketplace add https://github.com/reclaimprotocol/developer-tools.git
+```
+
+Then open Cursor's **Customize** page (or `/plugin` in Cursor Agent), find `reclaim` in the `reclaim` marketplace, and install it at user or project scope. Cursor does not currently expose a non-interactive plugin-install command.
+
+To refresh the catalog manually, run `agent plugin marketplace update reclaim`. Cursor Teams and Enterprise admins can instead import this repository as a team marketplace and enable **Auto Refresh** so pushes are re-indexed automatically.
+
+**Advanced fallback — add the MCP server directly.** Skip this if you installed the plugin. Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project):
 
 ```json
 {
@@ -89,7 +103,33 @@ Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project):
 }
 ```
 
-## opencode
+## OMP
+
+Install the plugin from the native OMP marketplace:
+
+```bash
+omp plugin marketplace add reclaimprotocol/developer-tools
+omp plugin install reclaim@reclaim
+```
+
+Enable automatic catalog and plugin upgrades:
+
+```bash
+omp config set marketplace.autoUpdate auto
+```
+
+To update immediately instead, run:
+
+```bash
+omp plugin marketplace update reclaim
+omp plugin upgrade reclaim@reclaim
+```
+
+OMP can also read the Claude marketplace in this repository as a compatibility fallback, but the native `.omp-plugin/marketplace.json` is preferred.
+
+## OpenCode
+
+OpenCode does not currently have a Git marketplace format for MCP plugins. Its distributable plugins are npm modules, and its documented plugin API does not provide a stable way for a package to register an MCP server. Use the native MCP configuration instead.
 
 Add to `opencode.json` (project) or `~/.config/opencode/opencode.json` (global):
 
@@ -105,6 +145,8 @@ Add to `opencode.json` (project) or `~/.config/opencode/opencode.json` (global):
   }
 }
 ```
+
+The package reference is intentionally unpinned. OpenCode starts the command through `npx`, which resolves the current `@reclaimprotocol/agent` release without requiring a marketplace manifest update.
 
 ## Codex
 
@@ -132,7 +174,17 @@ command = "npx"
 args = ["-y", "--package=@reclaimprotocol/agent", "reclaim-mcp-server"]
 ```
 
-## Antigravity, Windsurf, VS Code, Cline, and other MCP clients
+## Antigravity
+
+Install the GitHub-hosted Antigravity plugin:
+
+```bash
+agy plugin install https://github.com/reclaimprotocol/developer-tools
+```
+
+Antigravity currently supports only its curated official marketplace, not third-party marketplace catalogs. This repository includes the root `plugin.json` and `mcp_config.json` needed for direct GitHub installation and is ready to submit through [Antigravity's marketplace interest form](https://forms.gle/2EX5RFYPoJe1UgxR9). Until it is accepted into the official catalog, update a direct install by reinstalling it from the GitHub URL.
+
+## Windsurf, VS Code, Cline, and other MCP clients
 
 These all use the standard `mcpServers` shape. Add a server through the app's MCP settings, or its `mcp`/`mcpServers` config file, with:
 
@@ -174,20 +226,25 @@ The agent orchestrates authentication, browser capture, provider synthesis, repl
 ```
 .claude-plugin/marketplace.json     Claude marketplace metadata + the plugin entry
 .agents/plugins/marketplace.json    Codex marketplace + the plugin entry
+.cursor-plugin/marketplace.json     Cursor marketplace metadata + the plugin entry
+.omp-plugin/marketplace.json        OMP marketplace metadata + the plugin entry
+plugin.json                         Antigravity plugin manifest
+mcp_config.json                     Antigravity MCP configuration
 reclaim/.claude-plugin/plugin.json  Claude plugin manifest
 reclaim/.codex-plugin/plugin.json   Codex plugin manifest
-reclaim/.mcp.json                   The stdio command both plugins run
+reclaim/.cursor-plugin/plugin.json  Cursor plugin manifest
+reclaim/.mcp.json                   The shared stdio command used by marketplace plugins
 scripts/sync-version.ts             Version sync (below)
 ```
 
-Both plugins run the published [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) through `npx`, so the version in the manifests tracks that package rather than anything in this repository. To sync it (Node 22.18 or later):
+Every plugin runs the published [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) through `npx`, so the version in the manifests tracks that package rather than anything in this repository. To sync it (Node 22.18 or later):
 
 ```bash
 npm run sync-version            # use the latest @reclaimprotocol/agent on npm
 npm run sync-version -- 0.2.0   # or set an explicit version
 ```
 
-It rewrites every `version` field in `.claude-plugin/marketplace.json` (both the marketplace metadata and the plugin entry), `reclaim/.claude-plugin/plugin.json`, and `reclaim/.codex-plugin/plugin.json`, preserving each file's formatting. The Codex marketplace has no version field.
+It rewrites every `version` field in the Claude, Cursor, and OMP marketplace catalogs, the Antigravity manifest, and each versioned client plugin manifest while preserving file formatting. The Codex marketplace has no version field.
 
 Run this **after** bumping the version in the [builder](https://github.com/reclaimprotocol/builder) monorepo and publishing the package — the npm lookup only finds a version that already exists.
 
@@ -196,6 +253,10 @@ Validate the manifests before committing:
 ```bash
 claude plugin validate .          # Claude marketplace manifest
 claude plugin validate ./reclaim  # Claude plugin manifest
+agy plugin validate .             # Antigravity plugin
+omp plugin marketplace add "$PWD" # add the checkout, then use the dry-run below
+omp plugin install --dry-run reclaim@reclaim
+omp plugin marketplace remove reclaim
 ```
 
 Codex has no validate command. Install from your checkout in a throwaway Codex home instead:
