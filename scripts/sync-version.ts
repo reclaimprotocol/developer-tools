@@ -20,14 +20,18 @@ import { fileURLToPath } from 'url'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PACKAGE = '@reclaimprotocol/agent'
 
-// Files that carry a version, relative to the repo root. The Claude
-// `marketplace.json` holds two `version` keys (marketplace metadata + the
-// plugin entry); both are set. The Codex marketplace has no version, so only
-// its plugin manifest is listed.
+// Files that carry a version, relative to the repo root. Marketplace files
+// can hold two `version` keys (marketplace metadata + the plugin entry); both
+// are set. The Codex marketplace has no version, so only its plugin manifest
+// is listed. The root plugin.json is the GitHub-installable Antigravity plugin.
 const TARGETS = [
 	'.claude-plugin/marketplace.json',
+	'.cursor-plugin/marketplace.json',
+	'.omp-plugin/marketplace.json',
+	'plugin.json',
 	'reclaim/.claude-plugin/plugin.json',
 	'reclaim/.codex-plugin/plugin.json',
+	'reclaim/.cursor-plugin/plugin.json',
 ]
 
 const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
