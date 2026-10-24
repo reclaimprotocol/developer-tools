@@ -1,5 +1,5 @@
 {
 	"name": "reclaim",
-	"version": "0.1.38",
+	"version": "0.1.39",
 	"description": "Build, test, and fix Reclaim Protocol data verification providers with the Reclaim MCP server."
 }
