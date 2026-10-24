@@ -30,10 +30,10 @@ The server is published to npm as [`@reclaimprotocol/agent`](https://www.npmjs.c
 
 ## Prerequisites
 
-- **Node 22 or later.** This matches the `>=22.0.0` engine requirement of the published `@reclaimprotocol/agent` package. A current LTS line is recommended.
+- **Node.js 22.12 or later.** This matches the `>=22.12.0` engine requirement of the published `@reclaimprotocol/agent` package. The server starts with `npx`, which comes with Node.js.
 - **A local Chrome, Chromium, or Edge.** The server drives a real browser to capture traffic and to sign you in.
 
-The first time you run a proof, the server downloads the ZK circuit files it needs, about 280 MB. Allow a moment for that first proof. The download is deferred to the first proof rather than run at install time, so the server itself starts immediately.
+The first time you run a proof, the server downloads the ZK circuit files it needs, about 280 MB. Allow a moment for that first proof. The download happens at the first proof, not at install time, so the server starts immediately.
 
 Every client below runs the same **stdio MCP server**:
 
@@ -45,14 +45,18 @@ npx -y --package=@reclaimprotocol/agent reclaim-mcp-server
 
 ## Claude Code
 
-Install the plugin from the marketplace:
+Install the plugin from the marketplace. In a terminal, run:
 
 ```bash
 claude plugin marketplace add reclaimprotocol/developer-tools
 claude plugin install reclaim@reclaim
 ```
 
-Prefer this over the manual `claude mcp add` below unless you have a specific reason not to.
+Then run `/reload-plugins` in your open session. You don't need to restart Claude Code. If the tools still don't appear, restart Claude Code. To confirm that the server connected, run `/mcp`, which lists connected servers.
+
+Installing a plugin adds third-party code, so an agent's permission checks (for example, Claude Code auto mode) can block the agent from running these commands. In that case, run the commands yourself. In Claude Code, type each one in the prompt with a `!` prefix.
+
+Use the plugin instead of the manual `claude mcp add` below unless you have a specific reason not to.
 
 **Advanced fallback — add the MCP server directly.** Skip this if you installed the plugin:
 
@@ -74,11 +78,15 @@ Or add it to `.mcp.json` yourself:
 }
 ```
 
-Run `/mcp` inside Claude Code to confirm the server connected.
+If you add the server this way, run `/mcp` to confirm that it connected.
+
+### Troubleshoot Claude Code auto mode
+
+Auto mode can block destructive Reclaim tools. If a Reclaim tool call is blocked, approve it in `/permissions` (**Recently denied** tab). Or add the tool to `permissions.allow` in `~/.claude/settings.json`. Plugin tool names look like `mcp__plugin_reclaim_reclaim__<tool>`. Allow specific tools instead of a wildcard, because some tools delete organization resources.
 
 ## Claude Desktop
 
-Add the same `mcpServers` entry through the app's MCP settings, then **fully quit and reopen** Claude Desktop. Closing the window is not enough — it re-reads the config only on a full restart.
+Add the same `mcpServers` entry through the app's MCP settings, then **fully quit and reopen** Claude Desktop. Closing the window isn't enough, because the app re-reads the config only on a full restart.
 
 ## GitHub Copilot / VS Code
 
@@ -230,13 +238,17 @@ These all use the standard `mcpServers` shape. Add a server through the app's MC
 
 ## Using it from your agent
 
-The MCP server is all you need. It ships a `how_it_works` tool that serves the capture → prove → publish guide **one topic at a time** — login detection, choosing an authentication-bound endpoint, the OPRF privacy decision, publishing, troubleshooting. Call it with no arguments for the overview and the topic index, then again for the topic you need.
+The MCP server gives your agent the tools. The plugin also includes the `adding-reclaim-verification` skill, which tells your agent which tool to start with.
 
-Have your agent call `how_it_works` first, then ask in plain language. For example:
+To add verification to an app, the main entry is the `start_integration` tool. The Reclaim dashboard gives you a prompt that calls it. Your agent follows the plan it returns: prove the provider first, then write the app code.
+
+For guidance on a specific topic, your agent calls the `how_it_works` tool. It serves the capture, prove, and publish guide one topic at a time: login detection, choosing an authentication-bound endpoint, the OPRF privacy decision, publishing, and troubleshooting. Called with no arguments, it returns the overview and the topic index.
+
+You can also ask in plain language. For example:
 
 > "Use Reclaim to create a provider that proves my GitHub follower count."
 
-The agent orchestrates authentication, browser capture, provider synthesis, replay, the zkTLS proof, and publishing. Your only manual steps are signing in when the browser window opens and confirming the value you want to prove.
+Your agent handles authentication, browser capture, provider synthesis, replay, the zkTLS proof, and publishing. Your only manual steps are signing in when the browser window opens and confirming the value you want to prove.
 
 ## Maintaining this repository
 
@@ -253,6 +265,8 @@ reclaim/.codex-plugin/plugin.json   Codex plugin manifest
 reclaim/.cursor-plugin/plugin.json  Cursor plugin manifest
 reclaim/.github/plugin/plugin.json  GitHub Copilot plugin manifest
 reclaim/.mcp.json                   The shared stdio command used by marketplace plugins
+reclaim/skills/adding-reclaim-verification/SKILL.md
+                                    Skill that routes agents to the MCP tools
 scripts/sync-version.ts             Version sync (below)
 ```
 

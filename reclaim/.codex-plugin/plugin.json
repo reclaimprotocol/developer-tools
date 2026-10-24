@@ -11,6 +11,7 @@
 	"repository": "https://github.com/reclaimprotocol/developer-tools",
 	"license": "MIT",
 	"keywords": ["mcp", "data", "verification", "zktls", "reclaim", "provider-authoring", "zero-knowledge"],
+	"skills": "./skills/",
 	"mcpServers": "./.mcp.json",
 	"interface": {
 		"displayName": "Reclaim Protocol",
