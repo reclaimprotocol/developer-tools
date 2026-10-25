@@ -52,9 +52,9 @@ claude plugin marketplace add reclaimprotocol/developer-tools
 claude plugin install reclaim@reclaim
 ```
 
-Then run `/reload-plugins` in your open session. You don't need to restart Claude Code. If the tools still don't appear, restart Claude Code. To confirm that the server connected, run `/mcp`, which lists connected servers.
+Then restart Claude Code. To confirm that the server connected, run `/mcp`, which lists connected servers.
 
-Installing a plugin adds third-party code, so an agent's permission checks (for example, Claude Code auto mode) can block the agent from running these commands. In that case, run the commands yourself. In Claude Code, type each one in the prompt with a `!` prefix.
+If you ask your agent to install the plugin, it runs these commands for you. Installing a plugin adds third-party code, so permission checks (for example, Claude Code auto mode) can block them. If that happens, run the commands yourself. In Claude Code, type each one in the prompt with a `!` prefix.
 
 Use the plugin instead of the manual `claude mcp add` below unless you have a specific reason not to.
 

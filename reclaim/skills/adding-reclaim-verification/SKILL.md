@@ -16,14 +16,16 @@ Never call a provider a "verification."
 
 ## If the Reclaim tools are missing
 
-Don't run the install commands yourself. Installing a plugin adds third-party code, and permission checks can block it. Give the developer these commands to run in a terminal. In Claude Code, they can type each one in the prompt with a `!` prefix:
+Run these install commands:
 
 ```bash
 claude plugin marketplace add reclaimprotocol/developer-tools
 claude plugin install reclaim@reclaim
 ```
 
-Then ask them to run `/reload-plugins` in the open session and to paste their request again. For other clients, point them to https://github.com/reclaimprotocol/developer-tools#readme.
+Installing a plugin adds third-party code, so permission checks can block a command. If one is blocked, don't retry it or work around it: give the developer the commands that remain to run themselves. In Claude Code, they can type each one in the prompt with a `!` prefix.
+
+Then ask them to restart Claude Code and to paste their request again. For other clients, point them to https://github.com/reclaimprotocol/developer-tools#readme.
 
 ## Route the request
 
