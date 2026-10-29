@@ -1,6 +1,6 @@
 {
 	"name": "reclaim",
-	"version": "0.1.40",
+	"version": "0.1.41",
 	"description": "Build and maintain Reclaim Protocol data verification providers from your editor: capture a site's network traffic, synthesize a provider recipe, replay it, run a zkTLS proof, and publish it. Also inspects verification sessions and diagnoses failed ones.",
 	"author": {
 		"name": "Reclaim Protocol",
