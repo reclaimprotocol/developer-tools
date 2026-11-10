@@ -1,7 +1,7 @@
 {
   "name": "Reclaim Protocol",
   "contact": "support@reclaimprotocol.org",
-  "website": "https://www.reclaimprotocol.org",
+  "website": "https://build.reclaimprotocol.org",
   "repository": "https://github.com/reclaimprotocol/developer-tools",
   "logo": "https://avatars.githubusercontent.com/u/130321117?s=400&v=4",
   "developerMcp": {
@@ -9,11 +9,6 @@
     "version": "0.1.45",
     "command": "npx -y --package=@reclaimprotocol/agent reclaim-mcp-server",
     "status": "published"
-  },
-  "workflowMcp": {
-    "url": "https://letters.reclaimprotocol.org/mcp",
-    "version": "1.2.0",
-    "status": "early-beta"
   },
   "description": "Reclaim Protocol helps products and agents request user-authorized, verifiable evidence from online accounts.",
   "useCases": [
@@ -23,5 +18,6 @@
     "Purchase history and receipts",
     "Loyalty tier or membership status"
   ],
-  "support": "support@reclaimprotocol.org"
+  "support": "support@reclaimprotocol.org",
+  "target": "Builder MCP"
 }

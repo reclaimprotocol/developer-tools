@@ -1,15 +1,15 @@
 # Reclaim developer tools
 
-## Agent discovery and workflow verification
+## Builder MCP discovery
 
-This repository also packages the early-beta [Reclaim Verification Letters plugin](plugins/reclaim-letters), a Gemini CLI extension, official MCP Registry metadata, and platform adapters.
+Install the Reclaim Protocol Builder MCP for https://build.reclaimprotocol.org using the published `@reclaimprotocol/agent` package. This repository includes client plugins, a Gemini CLI extension, agent documentation, and registry submission metadata.
 
 - [Product integration guide](docs/product-integration.md)
 - [Supported verification request patterns](docs/verification-recipes.md)
 - [Registration status and submission materials](distribution/README.md)
 - [Agent installation instructions](llms-install.md)
 
-The workflow MCP is `https://letters.reclaimprotocol.org/mcp`. Product integrations use the developer MCP documented below.
+All Builder MCP submissions identify `@reclaimprotocol/agent` over local stdio. The separate Letters beta is outside this registration campaign.
 
 
 [![Add to Claude Code](https://img.shields.io/badge/Add%20to-Claude%20Code-D97757?style=for-the-badge&logo=anthropic&logoColor=white)](#claude-code)

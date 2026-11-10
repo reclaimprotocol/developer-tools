@@ -1,4 +1,4 @@
-name: Publish Reclaim MCP registry metadata
+name: Publish Builder MCP registry metadata
 
 on:
   workflow_dispatch:
@@ -7,7 +7,8 @@ on:
     paths:
       - server.json
       - .github/workflows/publish-mcp-registry.yml
-      - scripts/check-mcp.mjs
+      - scripts/check-builder-mcp.mjs
+      - scripts/prepare-builder-registry.mjs
 
 permissions:
   contents: read
@@ -27,16 +28,27 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
-      - name: Check the live MCP endpoint
-        run: node scripts/check-mcp.mjs
       - name: Install pinned MCP publisher
         run: |
           curl -fsSL https://github.com/modelcontextprotocol/registry/releases/download/v1.8.9/mcp-publisher_linux_amd64.tar.gz -o mcp-publisher.tar.gz
           echo "4d527ca8f1ced0394c962dc925c2a4a4addef441cbefd62501c875e9481823a8  mcp-publisher.tar.gz" | sha256sum -c -
           tar -xzf mcp-publisher.tar.gz mcp-publisher
-      - name: Validate metadata
-        run: ./mcp-publisher validate server.json
       - name: Authenticate using repository identity
         run: ./mcp-publisher login github-oidc
-      - name: Publish registry entry
+      - name: Withdraw the incorrectly targeted Letters registration
+        run: >-
+          ./mcp-publisher status --status deleted
+          --message "Registered in error during Builder MCP distribution. The intended product is build.reclaimprotocol.org, distributed as @reclaimprotocol/agent."
+          io.github.reclaimprotocol/verification-letters 1.2.0
+      - name: Check published Builder package ownership metadata
+        id: package
+        run: node scripts/prepare-builder-registry.mjs
+      - name: Check the published Builder stdio MCP
+        if: steps.package.outputs.ready == 'true'
+        run: node scripts/check-builder-mcp.mjs
+      - name: Validate Builder registry metadata
+        if: steps.package.outputs.ready == 'true'
+        run: ./mcp-publisher validate server.json
+      - name: Publish Builder registry entry
+        if: steps.package.outputs.ready == 'true'
         run: ./mcp-publisher publish server.json
