@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.tgz
+__pycache__/
+.venv/
+.env*
+!.env.example
+.mcpregistry_*

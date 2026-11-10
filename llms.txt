@@ -1,0 +1,13 @@
+# Reclaim Protocol
+
+User-authorized verification of information from online accounts.
+
+## Product integrations
+- [Agent installation](https://github.com/reclaimprotocol/developer-tools#readme)
+- [Developer documentation](https://docs.reclaimprotocol.org)
+- [Current integration guide](https://github.com/reclaimprotocol/developer-tools/blob/main/docs/product-integration.md)
+
+## Workflow verification (early beta)
+- [Agent instructions](https://letters.reclaimprotocol.org/agents)
+- [OpenAPI](https://letters.reclaimprotocol.org/openapi.json)
+- [MCP](https://letters.reclaimprotocol.org/mcp)

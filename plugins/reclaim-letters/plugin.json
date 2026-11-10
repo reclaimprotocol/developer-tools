@@ -1,0 +1,45 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "reclaim-letters",
+  "version": "1.2.0",
+  "description": "Request user-authorized verification from online accounts, create shareable requests and verified letters, or verify Reclaim PDFs. Early beta.",
+  "author": {
+    "name": "Reclaim Protocol",
+    "email": "support@reclaimprotocol.org",
+    "url": "https://reclaimprotocol.org"
+  },
+  "homepage": "https://letters.reclaimprotocol.org/agents",
+  "repository": "https://github.com/reclaimprotocol/developer-tools",
+  "license": "MIT",
+  "keywords": [
+    "verification",
+    "student-enrollment",
+    "employment",
+    "income",
+    "account-ownership",
+    "mcp"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Reclaim Protocol",
+        "shortDescription": "Verify account-backed claims",
+        "longDescription": "Request user-authorized evidence from online accounts for supported education, employment, income, purchases, account ownership, and loyalty checks. Create shareable verification requests, generate verified letters, and verify received Reclaim PDFs. Early beta. The account holder reviews the request and signs in through a browser handoff.",
+        "developerName": "Reclaim Protocol",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write",
+          "Interactive"
+        ],
+        "websiteURL": "https://letters.reclaimprotocol.org/agents",
+        "privacyPolicyURL": "https://www.reclaimprotocol.org/privacy",
+        "defaultPrompt": [
+          "Create a request to verify my university enrollment.",
+          "Request evidence of employment from an online account.",
+          "Verify the values and sources in a Reclaim PDF."
+        ]
+      }
+    }
+  }
+}
