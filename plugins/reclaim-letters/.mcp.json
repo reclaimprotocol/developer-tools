@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "reclaim-letters": {
+      "type": "http",
+      "url": "https://letters.reclaimprotocol.org/mcp"
+    }
+  }
+}

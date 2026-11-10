@@ -1,0 +1,12 @@
+{
+  "name": "reclaim-letters",
+  "version": "1.2.0",
+  "description": "Create user-authorized verification requests and verified letters from online accounts, or verify a Reclaim PDF. Early beta.",
+  "author": {
+    "name": "Reclaim Protocol",
+    "email": "support@reclaimprotocol.org"
+  },
+  "homepage": "https://letters.reclaimprotocol.org/agents",
+  "license": "MIT",
+  "mcpServers": "./.mcp.json"
+}

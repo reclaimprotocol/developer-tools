@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-11-10 17:20:09 UTC",
+  "endpoint": "https://letters.reclaimprotocol.org/mcp",
+  "checks": {
+    "initialize": "passed",
+    "toolsList": "passed",
+    "registryValidation": "passed"
+  },
+  "serverInfo": {
+    "name": "reclaim-verification-letters",
+    "version": "1.2.0"
+  },
+  "tools": [
+    "create_letter",
+    "create_verification_link",
+    "get_letter_status",
+    "get_letter_download",
+    "cancel_letter",
+    "prepare_pdf_verification",
+    "get_pdf_verification"
+  ],
+  "registryValidation": {
+    "valid": true,
+    "issues": []
+  },
+  "scope": "Metadata and protocol checks only. No account holder completed a verification during this check."
+}

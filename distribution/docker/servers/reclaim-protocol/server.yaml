@@ -1,0 +1,15 @@
+name: reclaim-protocol
+type: remote
+meta:
+  category: productivity
+  tags:
+    - verification
+    - source-account
+    - remote
+about:
+  title: Reclaim Protocol Verification Letters
+  description: Request user-authorized verification from online accounts, share fixed verification requests, and verify Reclaim PDFs. Early beta.
+  icon: https://avatars.githubusercontent.com/u/130321117?s=400&v=4
+remote:
+  transport_type: streamable-http
+  url: https://letters.reclaimprotocol.org/mcp

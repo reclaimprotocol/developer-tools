@@ -1,0 +1,21 @@
+{
+  "projectTitle": "Reclaim Protocol Agent Integrations",
+  "description": "Source-account verification for coding and workflow agents: current Builder integration, MCP setup, verified callbacks, and early-beta verification letters.",
+  "folders": [
+    "docs",
+    "reclaim/skills",
+    "plugins/reclaim-letters",
+    "integrations"
+  ],
+  "excludeFolders": [
+    "node_modules",
+    "dist",
+    "tests",
+    "distribution"
+  ],
+  "rules": [
+    "For new product integrations, use Builder AI sessions and verify callback results with @reclaimprotocol/client >=0.1.44.",
+    "Verification Letters is an early beta; keep its API separate from the authenticated Builder API.",
+    "Keep organization credentials and task capability tokens private. A request or redirect is not a verified result."
+  ]
+}
