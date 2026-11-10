@@ -1,9 +1,10 @@
-# Reclaim agent distribution
+# Reclaim Builder MCP distribution
 
-Publisher identity and reusable listing copy are in publisher.json. Destination state is recorded in registrations.json and summarized in registrations.md. Only evidence-backed receipts belong in receipts/.
+Public listing and installation repository: https://github.com/reclaimprotocol/developer-tools.
+Product: https://build.reclaimprotocol.org. Published MCP: @reclaimprotocol/agent, using local stdio.
 
-The public developer-tools repository contains packaging and adapters. The Builder backend's private source is not part of any submission.
+Use publisher.json for canonical listing information and llms-install.md for installation. registrations.json and registrations.md record destination status; a submission or installable manifest is separate from directory acceptance.
 
-The remote Letters server is an early beta. Registration and platform review are separate from service availability. A manifest, ZIP, or successful health check is not marketplace acceptance.
+Official Registry publication requires mcpName in a released npm package. See npm-release.md. The repository workflow checks that release before publishing io.github.reclaimprotocol/builder.
 
-Paid routes must have an explicit price and recurrence recorded before a purchase is requested. No paid purchase is authorized by this repository.
+Paid routes require an explicit price and recurrence before purchase approval. No purchase has been made.
