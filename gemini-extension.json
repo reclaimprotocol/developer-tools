@@ -1,7 +1,7 @@
 {
   "name": "reclaim",
   "version": "0.1.45",
-  "description": "Reclaim Protocol: integrate source-account verification in products or request verified letters in workflows.",
+  "description": "Integrate source-account verification into products with the Reclaim Protocol Builder MCP.",
   "contextFileName": "GEMINI.md",
   "mcpServers": {
     "reclaim": {
@@ -11,9 +11,6 @@
         "--package=@reclaimprotocol/agent",
         "reclaim-mcp-server"
       ]
-    },
-    "reclaim-letters": {
-      "httpUrl": "https://letters.reclaimprotocol.org/mcp"
     }
   }
 }

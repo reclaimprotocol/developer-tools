@@ -1,14 +1,10 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.reclaimprotocol/verification-letters",
-  "title": "Reclaim Protocol — Verification Letters",
-  "description": "Request user-authorized account verification, share verification links, and verify Reclaim PDFs.",
-  "version": "1.2.0",
-  "repository": {
-    "url": "https://github.com/reclaimprotocol/developer-tools",
-    "source": "github"
-  },
-  "websiteUrl": "https://letters.reclaimprotocol.org/agents",
+  "name": "io.github.reclaimprotocol/builder",
+  "title": "Reclaim Protocol Builder",
+  "description": "Integrate source-account verification into products. Find, build, test, and maintain providers.",
+  "version": "0.1.45",
+  "websiteUrl": "https://build.reclaimprotocol.org",
   "icons": [
     {
       "src": "https://avatars.githubusercontent.com/u/130321117?s=400&v=4",
@@ -18,10 +14,26 @@
       ]
     }
   ],
-  "remotes": [
+  "packages": [
     {
-      "type": "streamable-http",
-      "url": "https://letters.reclaimprotocol.org/mcp"
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@reclaimprotocol/agent",
+      "version": "0.1.45",
+      "runtimeHint": "npx",
+      "runtimeArguments": [
+        {
+          "type": "positional",
+          "value": "-y"
+        }
+      ],
+      "transport": {
+        "type": "stdio"
+      }
     }
-  ]
+  ],
+  "repository": {
+    "url": "https://github.com/reclaimprotocol/developer-tools",
+    "source": "github"
+  }
 }

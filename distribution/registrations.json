@@ -1,0 +1,283 @@
+{
+  "updatedAt": "2026-11-10",
+  "target": {
+    "product": "Reclaim Protocol Builder",
+    "website": "https://build.reclaimprotocol.org",
+    "package": "@reclaimprotocol/agent",
+    "transport": "stdio",
+    "registryName": "io.github.reclaimprotocol/builder",
+    "repository": "https://github.com/reclaimprotocol/developer-tools"
+  },
+  "destinations": [
+    {
+      "id": "npm",
+      "name": "npm Builder MCP",
+      "status": "live",
+      "url": "https://www.npmjs.com/package/@reclaimprotocol/agent",
+      "nextAction": "Release mcpName metadata for official Registry compatibility.",
+      "package": "@reclaimprotocol/agent",
+      "version": "0.1.45"
+    },
+    {
+      "id": "mcp-registry",
+      "name": "Official MCP Registry",
+      "status": "blocked-package-release",
+      "url": "https://registry.modelcontextprotocol.io",
+      "nextAction": "Release @reclaimprotocol/agent with mcpName io.github.reclaimprotocol/builder, then run the public repository OIDC workflow.",
+      "metadata": "server.json"
+    },
+    {
+      "id": "github",
+      "name": "GitHub curated MCP Registry",
+      "status": "nomination-withdrawn",
+      "url": "https://github.com/mcp",
+      "nextAction": "Publish Builder to the official Registry, then send a fresh nomination. The earlier Letters nomination was withdrawn by email."
+    },
+    {
+      "id": "mcpservers",
+      "name": "MCPServers.org",
+      "status": "correction-requested",
+      "url": "https://mcpservers.org/submit",
+      "nextAction": "Confirm the pending submission uses the public developer-tools repository, Builder product URL, and @reclaimprotocol/agent over stdio.",
+      "price": {
+        "amount": 0,
+        "currency": "USD",
+        "recurrence": "one-time"
+      }
+    },
+    {
+      "id": "mcpmarket",
+      "name": "MCP Market",
+      "status": "correction-requested",
+      "url": "https://mcpmarket.com/submit",
+      "nextAction": "Confirm the pending submission uses the public developer-tools repository, Builder product URL, and @reclaimprotocol/agent over stdio.",
+      "price": {
+        "amount": 0,
+        "currency": "USD",
+        "recurrence": "one-time"
+      }
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini CLI extension gallery",
+      "status": "discovery-configured",
+      "url": "https://github.com/reclaimprotocol/developer-tools",
+      "nextAction": "Await gallery indexing; root manifest and required gemini-cli-extension topic are present. Gallery inclusion is not yet verified."
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI Plugins",
+      "status": "blocked-login",
+      "url": "https://platform.openai.com/plugins",
+      "nextAction": "Sign in through the open local Chromium tab, then complete publisher eligibility and review. Builder is a local stdio MCP; use the local/plugin submission route."
+    },
+    {
+      "id": "claude",
+      "name": "Claude directory",
+      "status": "blocked-login",
+      "url": "https://claude.ai/directory/manage",
+      "nextAction": "Sign in through the open local Chromium tab, then complete publisher eligibility and review. Builder is a local stdio MCP; use the local/plugin submission route."
+    },
+    {
+      "id": "cursor",
+      "name": "Cursor Marketplace",
+      "status": "blocked-login",
+      "url": "https://cursor.com/marketplace/publish",
+      "nextAction": "Sign in through the open local Chromium tab, then complete publisher eligibility and review. Builder is a local stdio MCP; use the local/plugin submission route."
+    },
+    {
+      "id": "openai-desktop",
+      "name": "OpenAI desktop-only eligibility",
+      "status": "blocked-publisher-eligibility",
+      "url": "https://developers.openai.com/plugins/deploy/desktop-only",
+      "nextAction": "Confirm the submitting organization is allowlisted for local MCP plugins; do not submit the Letters endpoint as a substitute."
+    },
+    {
+      "id": "codex",
+      "name": "Codex marketplace",
+      "status": "direct-install-live",
+      "url": "https://github.com/reclaimprotocol/developer-tools/blob/main/.agents/plugins/marketplace.json",
+      "nextAction": "Public repository metadata supports direct installation. This is separate from curated directory approval."
+    },
+    {
+      "id": "claude-code",
+      "name": "Claude Code marketplace",
+      "status": "direct-install-live",
+      "url": "https://github.com/reclaimprotocol/developer-tools/blob/main/.claude-plugin/marketplace.json",
+      "nextAction": "Public repository metadata supports direct installation. This is separate from curated directory approval."
+    },
+    {
+      "id": "copilot",
+      "name": "Copilot / VS Code marketplace",
+      "status": "direct-install-live",
+      "url": "https://github.com/reclaimprotocol/developer-tools/blob/main/.github/plugin/marketplace.json",
+      "nextAction": "Public repository metadata supports direct installation. This is separate from curated directory approval."
+    },
+    {
+      "id": "cursor-direct",
+      "name": "Cursor direct marketplace",
+      "status": "direct-install-live",
+      "url": "https://github.com/reclaimprotocol/developer-tools/blob/main/.cursor-plugin/marketplace.json",
+      "nextAction": "Public repository metadata supports direct installation. This is separate from curated directory approval."
+    },
+    {
+      "id": "omp",
+      "name": "OMP marketplace",
+      "status": "direct-install-live",
+      "url": "https://github.com/reclaimprotocol/developer-tools/blob/main/.omp-plugin/marketplace.json",
+      "nextAction": "Public repository metadata supports direct installation. This is separate from curated directory approval."
+    },
+    {
+      "id": "antigravity",
+      "name": "Antigravity official marketplace",
+      "status": "pending",
+      "url": "https://antigravity.google",
+      "nextAction": "Complete the Builder-specific submission and required account or runtime checks; no acceptance claimed."
+    },
+    {
+      "id": "cline",
+      "name": "Cline MCP Marketplace",
+      "status": "pending",
+      "url": "https://github.com/cline/mcp-marketplace",
+      "nextAction": "Complete the Builder-specific submission and required account or runtime checks; no acceptance claimed."
+    },
+    {
+      "id": "docker",
+      "name": "Docker MCP Catalog",
+      "status": "pending",
+      "url": "https://github.com/docker/mcp-registry",
+      "nextAction": "Complete the Builder-specific submission and required account or runtime checks; no acceptance claimed."
+    },
+    {
+      "id": "smithery",
+      "name": "Smithery",
+      "status": "intake-unconfirmed",
+      "url": "https://smithery.ai",
+      "nextAction": "The former accounts, CLI and proxy publishing flow is shut down. Confirm the retained public registry nomination route."
+    },
+    {
+      "id": "glama",
+      "name": "Glama MCP directory",
+      "status": "blocked-login",
+      "url": "https://glama.ai/mcp/servers",
+      "nextAction": "Sign in through Add Server, then submit the public developer-tools repository."
+    },
+    {
+      "id": "context7",
+      "name": "Context7 documentation",
+      "status": "pending",
+      "url": "https://context7.com",
+      "nextAction": "Complete the Builder-specific submission and required account or runtime checks; no acceptance claimed."
+    },
+    {
+      "id": "skills",
+      "name": "skills.sh",
+      "status": "installation-check-prepared",
+      "url": "https://skills.sh",
+      "nextAction": "Run the genuine Builder skill installation check and verify the resulting catalog page."
+    },
+    {
+      "id": "clawhub",
+      "name": "ClawHub",
+      "status": "pending",
+      "url": "https://clawhub.ai",
+      "nextAction": "Complete the Builder-specific submission and required account or runtime checks; no acceptance claimed."
+    },
+    {
+      "id": "mcpso",
+      "name": "MCP.so",
+      "status": "awaiting-paid-approval",
+      "url": "https://mcp.so/submit",
+      "nextAction": "A listing costs $39 one time. No purchase or submission made.",
+      "price": {
+        "amount": 39,
+        "currency": "USD",
+        "recurrence": "one-time"
+      }
+    },
+    {
+      "id": "pulsemcp",
+      "name": "PulseMCP",
+      "status": "intake-paused",
+      "url": "https://www.pulsemcp.com/submit",
+      "nextAction": "Recheck the directory intake when it reopens."
+    },
+    {
+      "id": "vercel",
+      "name": "Vercel AI SDK",
+      "status": "builder-adapter-pending",
+      "url": "https://ai-sdk.dev",
+      "nextAction": "Use Builder MCP or the authenticated Builder API. Earlier local Letters adapter drafts are outside this campaign and have not been published."
+    },
+    {
+      "id": "langchain",
+      "name": "LangChain / LangGraph",
+      "status": "builder-adapter-pending",
+      "url": "https://docs.langchain.com",
+      "nextAction": "Use Builder MCP or the authenticated Builder API. Earlier local Letters adapter drafts are outside this campaign and have not been published."
+    },
+    {
+      "id": "llamaindex",
+      "name": "LlamaIndex",
+      "status": "builder-adapter-pending",
+      "url": "https://docs.llamaindex.ai",
+      "nextAction": "Use Builder MCP or the authenticated Builder API. Earlier local Letters adapter drafts are outside this campaign and have not been published."
+    },
+    {
+      "id": "crewai",
+      "name": "CrewAI",
+      "status": "builder-adapter-pending",
+      "url": "https://docs.crewai.com",
+      "nextAction": "Use Builder MCP or the authenticated Builder API. Earlier local Letters adapter drafts are outside this campaign and have not been published."
+    },
+    {
+      "id": "composio",
+      "name": "Composio",
+      "status": "builder-adapter-pending",
+      "url": "https://composio.dev",
+      "nextAction": "Use Builder MCP or the authenticated Builder API. Earlier local Letters adapter drafts are outside this campaign and have not been published."
+    },
+    {
+      "id": "n8n",
+      "name": "n8n",
+      "status": "builder-adapter-pending",
+      "url": "https://creators.n8n.io",
+      "nextAction": "Use Builder MCP or the authenticated Builder API. Earlier local Letters adapter drafts are outside this campaign and have not been published."
+    },
+    {
+      "id": "zapier",
+      "name": "Zapier",
+      "status": "builder-adapter-pending",
+      "url": "https://developer.zapier.com",
+      "nextAction": "Use Builder MCP or the authenticated Builder API. Earlier local Letters adapter drafts are outside this campaign and have not been published."
+    },
+    {
+      "id": "make",
+      "name": "Make",
+      "status": "builder-adapter-pending",
+      "url": "https://developers.make.com",
+      "nextAction": "Use Builder MCP or the authenticated Builder API. Earlier local Letters adapter drafts are outside this campaign and have not been published."
+    },
+    {
+      "id": "pipedream",
+      "name": "Pipedream",
+      "status": "builder-adapter-pending",
+      "url": "https://pipedream.com/docs/components",
+      "nextAction": "Use Builder MCP or the authenticated Builder API. Earlier local Letters adapter drafts are outside this campaign and have not been published."
+    },
+    {
+      "id": "dify",
+      "name": "Dify Marketplace",
+      "status": "builder-adapter-pending",
+      "url": "https://marketplace.dify.ai",
+      "nextAction": "Use Builder MCP or the authenticated Builder API. Earlier local Letters adapter drafts are outside this campaign and have not been published."
+    },
+    {
+      "id": "windsurf",
+      "name": "Windsurf / other MCP clients",
+      "status": "direct-configuration-documented",
+      "url": "https://github.com/reclaimprotocol/developer-tools#readme",
+      "nextAction": "Use the documented @reclaimprotocol/agent stdio configuration."
+    }
+  ]
+}
