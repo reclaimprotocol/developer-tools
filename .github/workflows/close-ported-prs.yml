@@ -1,0 +1,76 @@
+# Closes outside pull requests after the mirror syncs their ported change.
+# GitHub closing keywords don't close pull requests, so the sync commit carries
+# `Ports #N` lines and this workflow closes each listed pull request.
+# This workflow never checks out code and never puts commit text in a shell command.
+name: close-ported-prs
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close ported pull requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+          BOT_LOGIN: ${{ vars.MIRROR_APP_SLUG }}[bot]
+        run: |
+          set -euo pipefail
+
+          if [ "${BOT_LOGIN}" = "[bot]" ]; then
+            echo "::error::The MIRROR_APP_SLUG repository variable is empty."
+            exit 1
+          fi
+
+          # List the commits in the push. A new branch has an all-zero "before" value.
+          if [[ "${BEFORE}" =~ ^0+$ ]]; then
+            shas="${AFTER}"
+          else
+            shas="$(gh api --paginate "repos/${REPO}/compare/${BEFORE}...${AFTER}?per_page=100" --jq '.commits[].sha')"
+          fi
+
+          marker='<!-- ported-upstream -->'
+
+          for sha in ${shas}; do
+            if ! [[ "${sha}" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::Unexpected commit identifier."
+              exit 1
+            fi
+
+            # Trust only the API's author login, never the commit message.
+            author="$(gh api "repos/${REPO}/commits/${sha}" --jq '.author.login // ""')"
+            if [ "${author}" != "${BOT_LOGIN}" ]; then
+              continue
+            fi
+
+            numbers="$(gh api "repos/${REPO}/commits/${sha}" --jq '.commit.message' | sed -nE 's/^Ports #([0-9]+)$/\1/p' | sort -un)"
+
+            for pr in ${numbers}; do
+              state="$(gh api "repos/${REPO}/pulls/${pr}" --jq '.state' 2>/dev/null || echo missing)"
+              if [ "${state}" != "open" ]; then
+                echo "Pull request #${pr} is ${state}. Skipping."
+                continue
+              fi
+
+              existing="$(gh api --paginate "repos/${REPO}/issues/${pr}/comments?per_page=100" --jq '.[].body' | grep -cF "${marker}" || true)"
+              if [ "${existing}" -eq 0 ]; then
+                printf '%s\nThanks! This change was ported upstream and synced in %s. You'\''re credited as a co-author.\n' "${marker}" "${sha}" > comment.md
+                gh pr comment "${pr}" --repo "${REPO}" --body-file comment.md
+              fi
+
+              gh label create ported-upstream --repo "${REPO}" --color 0E8A16 \
+                --description "Change ported upstream and synced back to this repository" 2>/dev/null || true
+              gh pr edit "${pr}" --repo "${REPO}" --add-label ported-upstream --remove-label needs-upstream-port || \
+                gh pr edit "${pr}" --repo "${REPO}" --add-label ported-upstream
+              gh pr close "${pr}" --repo "${REPO}"
+            done
+          done

@@ -24,6 +24,12 @@ Reclaim Protocol lets your app verify **data points** about its users — a foll
 
 The server is published to npm as [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) (bin: `reclaim-mcp-server`). This repository carries plugins and marketplaces for clients that support them, plus direct install instructions for every other client.
 
+## Source packages and contributing
+
+The source for [`@reclaimprotocol/client`](packages/client) and [`@reclaimprotocol/agent`](packages/agent) is in `packages/`. Reclaim develops these packages in a private monorepo and mirrors them here, so changes to `packages/` go through a maintainer-assisted port. When the change syncs back, a bot closes the pull request with a link to the sync commit, and the contributor is credited as a co-author. Everything else in this repository is developed here directly.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) to report a bug, propose a fix, or report a vulnerability. Maintainers: set the repository variable `MIRROR_APP_SLUG` to the slug of the mirror GitHub App, and require the `mirror-guard` check in the ruleset for `main`.
+
 ## Contents
 
 - [Prerequisites](#prerequisites)
@@ -282,7 +288,7 @@ reclaim/skills/adding-reclaim-verification/SKILL.md
 scripts/sync-version.ts             Version sync (below)
 ```
 
-Every plugin runs the published [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) through `npx`, so the version in the manifests tracks that package rather than anything in this repository. To sync it (Node 22.18 or later):
+Every plugin runs the published [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) through `npx`, so the version in the manifests tracks that package rather than anything in this repository. To sync it manually (Node 22.19 or later):
 
 ```bash
 npm run sync-version            # use the latest @reclaimprotocol/agent on npm
@@ -291,7 +297,7 @@ npm run sync-version -- 0.2.0   # or set an explicit version
 
 It rewrites every `version` field in the Claude, Cursor, GitHub Copilot, and OMP marketplace catalogs, the Antigravity manifest, and each versioned client plugin manifest while preserving file formatting. The Codex marketplace has no version field.
 
-Run this **after** bumping the version in the [builder](https://github.com/reclaimprotocol/builder) monorepo and publishing the package — the npm lookup only finds a version that already exists.
+You usually don't run this by hand. You set the version once in the private monorepo, and the mirror pull request syncs the plugin manifests when the package version changes. Merging that pull request runs `release.yml`, which publishes the packages to npm and the MCP Registry. See [distribution/npm-release.md](distribution/npm-release.md).
 
 Validate the manifests before committing:
 

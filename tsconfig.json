@@ -1,0 +1,30 @@
+{
+	"compilerOptions": {
+		"lib": [
+			"ESNext"
+		],
+		"moduleResolution": "nodenext",
+		"module": "nodenext",
+		"outDir": "lib",
+		"strict": true,
+		"skipLibCheck": true,
+		"erasableSyntaxOnly": true,
+		"target": "es2020",
+		"rewriteRelativeImportExtensions": true,
+		"allowJs": true,
+		"baseUrl": ".",
+		"paths": {},
+		"declaration": true,
+		"resolveJsonModule": true,
+		"noUnusedLocals": true,
+		"forceConsistentCasingInFileNames": true
+	},
+	"include": [
+		"packages/**/*.ts",
+		"scripts/*.ts",
+		"eslint.config.js"
+	],
+	"exclude": [
+		"node_modules"
+	]
+}

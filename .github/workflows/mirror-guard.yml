@@ -1,0 +1,81 @@
+# Blocks pull requests that change mirrored packages or the files that pin their
+# dependencies, unless the mirror bot opens them.
+#
+# Guarded paths: packages/**, package.json, package-lock.json, .npmrc, .nvmrc.
+#
+# Configure the repository variable MIRROR_APP_SLUG with the slug of the GitHub App
+# that opens the "mirror/builder" sync pull request (for example, "reclaim-mirror").
+# Require this check ("mirror-guard") in the repository ruleset for main. See
+# docs/maintainers.md for the settings that keep this check trustworthy.
+name: mirror-guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  mirror-guard:
+    name: mirror-guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check changes to guarded paths
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.event.pull_request.base.repo.full_name }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+          APP_SLUG: ${{ vars.MIRROR_APP_SLUG }}
+        run: |
+          set -euo pipefail
+
+          guarded='^(packages/|package\.json$|package-lock\.json$|\.npmrc$|\.nvmrc$)'
+
+          # The files API returns at most 3000 files. Fail closed when the list is incomplete.
+          if [ "${CHANGED_FILES}" -gt 3000 ]; then
+            echo "::error::This pull request changes ${CHANGED_FILES} files, which is more than the 3000 the API lists, so mirror-guard can't verify it."
+            exit 1
+          fi
+          files="$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/files?per_page=100" --jq '.[] | .filename, (.previous_filename // empty)')"
+          listed="$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/files?per_page=100" --jq '.[] | .filename' | wc -l | tr -d '[:space:]')"
+          if [ "${listed}" -ne "${CHANGED_FILES}" ]; then
+            echo "::error::The API listed ${listed} files but the pull request changes ${CHANGED_FILES}, so mirror-guard can't verify it."
+            exit 1
+          fi
+
+          if ! grep -qE "${guarded}" <<<"${files}"; then
+            echo "No changes to guarded paths. Nothing to guard."
+            exit 0
+          fi
+
+          if [ "${HEAD_REF}" = "mirror/builder" ] && [ "${HEAD_REPO}" = "${BASE_REPO}" ]; then
+            if [ -z "${APP_SLUG}" ]; then
+              echo "::error::The repository variable MIRROR_APP_SLUG is not set. Set it to the slug of the mirror GitHub App so this check can verify mirror pull requests."
+              exit 1
+            fi
+            bot="${APP_SLUG}[bot]"
+            if [ "${AUTHOR}" = "${bot}" ]; then
+              # Every commit must come from the bot, so a collaborator can't push to the branch.
+              bad="$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/commits?per_page=100" \
+                --jq ".[] | select(.author.login != \"${bot}\" or .committer.login != \"${bot}\") | \"\(.sha[0:7]) author=\(.author.login // \"unknown\") committer=\(.committer.login // \"unknown\")\"")"
+              if [ -z "${bad}" ]; then
+                echo "Mirror pull request from ${AUTHOR} with only bot commits. Allowed."
+                exit 0
+              fi
+              echo "::error::The mirror pull request has commits that ${bot} didn't author and commit. Only the mirror app may push to mirror/builder."
+              echo "${bad}"
+              exit 1
+            fi
+          fi
+
+          echo "::error::This pull request changes guarded files (packages/, package.json, package-lock.json, .npmrc, .nvmrc), which Reclaim mirrors from its monorepo or pins centrally. Maintainers port the change upstream with credit to you, and this pull request closes when the mirror syncs. See CONTRIBUTING.md."
+          echo "Changed guarded files:"
+          grep -E "${guarded}" <<<"${files}" | head -50
+          exit 1

@@ -1,0 +1,29 @@
+# Runs with read-only permissions, including for fork pull requests. It records the
+# pull request number so that upstream-port-comment.yml can label and comment.
+name: upstream-port-label
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record pull request number
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          mkdir upstream-port
+          printf '%s\n' "${PR_NUMBER}" > upstream-port/pr-number
+
+      - name: Upload record
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: upstream-port
+          path: upstream-port/pr-number
+          retention-days: 1

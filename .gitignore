@@ -1,8 +1,11 @@
 node_modules/
 dist/
+packages/*/lib/
 *.tgz
 __pycache__/
 .venv/
 .env*
 !.env.example
+# Test-only dummy values, mirrored from builder.
+!packages/agent/.test.env
 .mcpregistry_*

@@ -1,0 +1,14 @@
+# Code owners for files that mirror pull requests don't touch.
+# Don't add packages/, package.json or package-lock.json here: the mirror
+# pull request changes them and must merge automatically.
+# @reclaimprotocol/developer-tools-maintainers is a placeholder team. Create it
+# (or replace it with an existing team) before you require code owner review.
+/.github/ @reclaimprotocol/developer-tools-maintainers
+# The last matching pattern wins, and a pattern with no owners removes
+# ownership. The mirror's version sync edits .github/plugin/marketplace.json.
+/.github/plugin/
+/scripts/ @reclaimprotocol/developer-tools-maintainers
+/.nvmrc @reclaimprotocol/developer-tools-maintainers
+/eslint.config.js @reclaimprotocol/developer-tools-maintainers
+/tsconfig.json @reclaimprotocol/developer-tools-maintainers
+/.npmrc @reclaimprotocol/developer-tools-maintainers

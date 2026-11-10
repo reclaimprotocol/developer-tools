@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url'
  * just runs `npx @reclaimprotocol/agent`, so the source of truth is that
  * package's published version — fetched from npm by default:
  *
- *   npm run sync-version             # use latest @reclaimprotocol/agent from npm
+ *   npm run sync-version             # use the latest agent version on npm
  *   npm run sync-version -- 0.2.0    # set an explicit version instead
  *
  * Only the `version` field values are rewritten (targeted string replace), so
@@ -23,12 +23,14 @@ const PACKAGE = '@reclaimprotocol/agent'
 // Files that carry a version, relative to the repo root. Marketplace files
 // can hold two `version` keys (marketplace metadata + the plugin entry); both
 // are set. The Codex marketplace has no version, so only its plugin manifest
-// is listed. The root plugin.json is the GitHub-installable Antigravity plugin.
+// is listed. The root plugin.json is the GitHub-installable Antigravity plugin,
+// and gemini-extension.json is the Gemini CLI extension manifest.
 const TARGETS = [
 	'.claude-plugin/marketplace.json',
 	'.cursor-plugin/marketplace.json',
 	'.github/plugin/marketplace.json',
 	'.omp-plugin/marketplace.json',
+	'gemini-extension.json',
 	'plugin.json',
 	'reclaim/.claude-plugin/plugin.json',
 	'reclaim/.codex-plugin/plugin.json',
