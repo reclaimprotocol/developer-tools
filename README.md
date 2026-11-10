@@ -312,4 +312,3 @@ codex plugin marketplace add "$PWD"
 codex plugin add reclaim@reclaim
 codex mcp list                    # lists the reclaim server
 ```
-
