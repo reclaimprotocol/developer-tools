@@ -62,7 +62,10 @@ jobs:
       - run: npm run build
       - run: npm test
       - name: Pack the packages
-        run: npm pack -w @reclaimprotocol/client -w @reclaimprotocol/agent --pack-destination dist
+        # npm pack doesn't create the destination directory.
+        run: |
+          mkdir -p dist
+          npm pack -w @reclaimprotocol/client -w @reclaimprotocol/agent --pack-destination dist
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: npm-tarballs
