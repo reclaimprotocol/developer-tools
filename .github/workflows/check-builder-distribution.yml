@@ -17,8 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
       - name: Initialize the published Builder MCP and discover integration tools
@@ -26,7 +28,7 @@ jobs:
       - name: Validate portable Builder skill installation
         if: github.base_ref == 'main' && github.event.action == 'opened'
         run: npx -y skills@1.7.6 add https://github.com/reclaimprotocol/developer-tools --skill adding-reclaim-verification --agent codex --yes
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: builder-mcp-health
           path: distribution/receipts/builder-mcp-health.json

@@ -1,0 +1,20 @@
+{
+	"requests": [
+		{
+			"requestId": "r1",
+			"method": "GET",
+			"url": "https://api.github.com/users/octocat",
+			"status": 200,
+			"contentType": "application/json",
+			"size": 200,
+			"requestHeaders": {
+				"Authorization": "token ghp_FIXTUREONLY",
+				"Accept": "application/vnd.github+json",
+				"User-Agent": "reclaim-agent-test"
+			},
+			"responseHeaders": { "content-type": "application/json" },
+			"responseBody": "{\"login\":\"octocat\",\"followers\":1247}",
+			"finishedAt": 0
+		}
+	]
+}

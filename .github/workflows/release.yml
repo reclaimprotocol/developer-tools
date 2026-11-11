@@ -1,0 +1,157 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - packages/client/package.json
+      - packages/agent/package.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      release: ${{ steps.plan.outputs.release }}
+      client_publish: ${{ steps.plan.outputs.client_publish }}
+      agent_publish: ${{ steps.plan.outputs.agent_publish }}
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      tag_needed: ${{ steps.plan.outputs.tag_needed }}
+      registry_needed: ${{ steps.plan.outputs.registry_needed }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '24'
+      - name: Check which versions are missing from npm
+        id: plan
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release-plan.mjs
+
+  # Unprivileged: runs dependency code (npm ci, build, tests) with no token
+  # and no OIDC identity, then hands the tarballs to the publish job.
+  build:
+    needs: plan
+    if: needs.plan.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '24'
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: Pack the packages
+        run: npm pack -w @reclaimprotocol/client -w @reclaimprotocol/agent --pack-destination dist
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: npm-tarballs
+          path: dist/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  # Privileged: holds the OIDC identity but runs no repository or dependency
+  # code. It only publishes the tarballs built above.
+  publish:
+    needs: [plan, build]
+    if: github.ref == 'refs/heads/main' && needs.plan.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Trusted publishing on npm is bound to this workflow and environment name.
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      CLIENT_PUBLISH: ${{ needs.plan.outputs.client_publish }}
+      AGENT_PUBLISH: ${{ needs.plan.outputs.agent_publish }}
+      VERSION: ${{ needs.plan.outputs.version }}
+    steps:
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '24'
+      - name: Check that npm supports trusted publishing
+        run: |
+          current="$(npm --version)"
+          echo "npm ${current}"
+          [ "$(printf '%s\n' 11.5.1 "${current}" | sort -V | head -n1)" = "11.5.1" ]
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: npm-tarballs
+          path: dist
+      # No NODE_AUTH_TOKEN: npm authenticates with the workflow's OIDC identity.
+      - name: Publish @reclaimprotocol/client
+        if: env.CLIENT_PUBLISH == 'true'
+        run: npm publish "dist/reclaimprotocol-client-${VERSION}.tgz" --provenance --access public
+      - name: Publish @reclaimprotocol/agent
+        if: env.AGENT_PUBLISH == 'true'
+        run: npm publish "dist/reclaimprotocol-agent-${VERSION}.tgz" --provenance --access public
+
+  # Runs after a successful publish, or when nothing needed publishing (every
+  # version is already on npm) but the tag is missing, as on a rerun after a
+  # failure. When a release is planned, a skipped publish means build failed, so
+  # this job waits for publish to succeed. It never runs after a failed publish.
+  tag:
+    needs: [plan, publish]
+    if: >-
+      always() && github.ref == 'refs/heads/main'
+      && (needs.plan.outputs.release == 'true' || needs.plan.outputs.tag_needed == 'true')
+      && (needs.publish.result == 'success'
+        || (needs.plan.outputs.release != 'true' && needs.publish.result == 'skipped'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Tag and create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Create the tag through the API so the job needs no checkout.
+          if existing="$(gh api "repos/${REPO}/commits/refs/tags/${TAG}" --jq .sha 2>/dev/null)"; then
+            if [ "${existing}" != "${GITHUB_SHA}" ]; then
+              echo "Tag ${TAG} already points at ${existing}, not ${GITHUB_SHA}." >&2
+              exit 1
+            fi
+          else
+            gh api "repos/${REPO}/git/refs" -f "ref=refs/tags/${TAG}" -f "sha=${GITHUB_SHA}" >/dev/null
+          fi
+          if ! gh release view "${TAG}" --repo "${REPO}" >/dev/null 2>&1; then
+            gh release create "${TAG}" --repo "${REPO}" --verify-tag --title "${TAG}" --generate-notes
+          fi
+
+  registry:
+    needs: [plan, publish]
+    if: >-
+      always() && github.ref == 'refs/heads/main'
+      && needs.plan.outputs.registry_needed == 'true'
+      && (needs.publish.result == 'success'
+        || (needs.plan.outputs.release != 'true' && needs.publish.result == 'skipped'))
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/publish-mcp-registry.yml
+    with:
+      version: ${{ needs.plan.outputs.version }}

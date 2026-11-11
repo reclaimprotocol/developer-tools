@@ -24,6 +24,12 @@ Reclaim Protocol lets your app verify **data points** about its users — a foll
 
 The server is published to npm as [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) (bin: `reclaim-mcp-server`). This repository carries plugins and marketplaces for clients that support them, plus direct install instructions for every other client.
 
+## Source packages and contributing
+
+The source for [`@reclaimprotocol/client`](packages/client) and [`@reclaimprotocol/agent`](packages/agent) is in `packages/`, and it's developed here.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) to report a bug, propose a fix, or report a vulnerability. Maintainers: see [docs/maintainers.md](docs/maintainers.md) for the repository settings.
+
 ## Contents
 
 - [Prerequisites](#prerequisites)
@@ -279,19 +285,17 @@ reclaim/.github/plugin/plugin.json  GitHub Copilot plugin manifest
 reclaim/.mcp.json                   The shared stdio command used by marketplace plugins
 reclaim/skills/adding-reclaim-verification/SKILL.md
                                     Skill that routes agents to the MCP tools
-scripts/sync-version.ts             Version sync (below)
+scripts/bump-version.ts             Version bump (below)
 ```
 
-Every plugin runs the published [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) through `npx`, so the version in the manifests tracks that package rather than anything in this repository. To sync it (Node 22.18 or later):
+Every plugin runs the published [`@reclaimprotocol/agent`](https://www.npmjs.com/package/@reclaimprotocol/agent) through `npx`, so the version in the manifests tracks that package. The root `package.json` `version` is the release version. To release, edit it and run (Node 22.19 or later):
 
 ```bash
-npm run sync-version            # use the latest @reclaimprotocol/agent on npm
-npm run sync-version -- 0.2.0   # or set an explicit version
+npm run version:bump            # propagate the root version
+npm run version:bump -- 0.2.0   # or set the root version and propagate it
 ```
 
-It rewrites every `version` field in the Claude, Cursor, GitHub Copilot, and OMP marketplace catalogs, the Antigravity manifest, and each versioned client plugin manifest while preserving file formatting. The Codex marketplace has no version field.
-
-Run this **after** bumping the version in the [builder](https://github.com/reclaimprotocol/builder) monorepo and publishing the package — the npm lookup only finds a version that already exists.
+It sets both package versions, pins the agent's `@reclaimprotocol/client` dependency, rewrites every `version` field in the Claude, Cursor, GitHub Copilot, and OMP marketplace catalogs, the Antigravity and Gemini manifests, and each versioned client plugin manifest, and refreshes the lockfile. The Codex marketplace has no version field. CI fails if any of these drift from the root version. Merging the version change runs `release.yml`, which publishes the packages to npm and the MCP Registry. See [distribution/npm-release.md](distribution/npm-release.md).
 
 Validate the manifests before committing:
 

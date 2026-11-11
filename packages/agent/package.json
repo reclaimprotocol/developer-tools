@@ -1,0 +1,117 @@
+{
+	"name": "@reclaimprotocol/agent",
+	"mcpName": "io.github.reclaimprotocol/builder",
+	"title": "Reclaim Agent",
+	"version": "0.1.46",
+	"description": "Reclaim Protocol tools for AI coding agents. Reclaim lets your app verify data points about its users, such as a follower count, an account balance, or an order history. This package is the Reclaim MCP server: it gives your agent the tools to find, build, test, and fix data verification providers by capturing and replaying browser requests, drafting provider recipes, running zkTLS proofs, and publishing provider versions.",
+	"type": "module",
+	"main": "./lib/index.js",
+	"types": "./lib/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./lib/index.d.ts",
+			"import": "./lib/index.js"
+		},
+		"./authoring": {
+			"types": "./lib/authoring/index.d.ts",
+			"import": "./lib/authoring/index.js"
+		},
+		"./provider": {
+			"types": "./lib/provider/index.d.ts",
+			"import": "./lib/provider/index.js"
+		},
+		"./capture": {
+			"types": "./lib/cdp/index.d.ts",
+			"import": "./lib/cdp/index.js"
+		},
+		"./proof": {
+			"types": "./lib/proof/index.d.ts",
+			"import": "./lib/proof/index.js"
+		},
+		"./mcp/register": {
+			"types": "./lib/mcp/register.d.ts",
+			"import": "./lib/mcp/register.js"
+		}
+	},
+	"bin": {
+		"reclaim-mcp-server": "./lib/mcp-bin.js"
+	},
+	"files": [
+		"lib",
+		"src",
+		"scripts",
+		"skill",
+		"samples",
+		"README.md",
+		"LICENSE"
+	],
+	"engines": {
+		"node": ">=22.12.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/reclaimprotocol/developer-tools.git",
+		"directory": "packages/agent"
+	},
+	"homepage": "https://github.com/reclaimprotocol/developer-tools/tree/main/packages/agent#readme",
+	"bugs": {
+		"url": "https://github.com/reclaimprotocol/developer-tools/issues"
+	},
+	"websiteUrl": "https://docs.reclaimprotocol.org",
+	"scripts": {
+		"build": "tsc && node scripts/prepend-shebang.js && chmod 755 lib/mcp-bin.js",
+		"prepublishOnly": "npm run build",
+		"dev": "tsc --watch",
+		"test": "node --env-file=.test.env --test-timeout=120000 --test tests/*.test.ts",
+		"check": "tsc -p tsconfig.test.json",
+		"start:mcp": "node lib/mcp-bin.js",
+		"inspect": "npx @modelcontextprotocol/inspector node lib/mcp-bin.js",
+		"download:zk-files": "node scripts/download-zk-files.js"
+	},
+	"keywords": [
+		"mcp",
+		"model-context-protocol",
+		"sdk",
+		"ai",
+		"agent",
+		"chrome-devtools-protocol",
+		"reclaimprotocol",
+		"zktls",
+		"provider-authoring",
+		"zero-knowledge"
+	],
+	"author": {
+		"name": "Reclaim Protocol",
+		"email": "support@reclaimprotocol.org"
+	},
+	"license": "MIT",
+	"dependencies": {
+		"@hapi/boom": "^9.1.4",
+		"@modelcontextprotocol/sdk": "^1.29.0",
+		"@noble/hashes": "^2.2.0",
+		"@puppeteer/browsers": "3.2.4",
+		"@reclaimprotocol/attestor-core": "^5.1.6",
+		"@reclaimprotocol/client": "0.1.46",
+		"@reclaimprotocol/tls": "^0.1.3",
+		"chrome-remote-interface": "^0.33.0",
+		"domhandler": "^6.0.0",
+		"openid-client": "^6.8.5",
+		"parse5": "^8.0.0",
+		"parse5-htmlparser2-tree-adapter": "^8.0.0",
+		"pino": "^9.14.0",
+		"xpath": "^0.0.34",
+		"yauzl": "3.4.0",
+		"zod": "^4.4.3"
+	},
+	"devDependencies": {
+		"@types/chrome-remote-interface": "^0.31.0",
+		"@types/node": "^24.0.0",
+		"openapi-typescript": "^7.13.0",
+		"typescript": "^5.9.0",
+		"yaml": "^2.6.0"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	}
+}

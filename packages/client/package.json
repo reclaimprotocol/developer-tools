@@ -1,0 +1,87 @@
+{
+	"name": "@reclaimprotocol/client",
+	"title": "Reclaim Client",
+	"version": "0.1.46",
+	"description": "Typed SDK/HTTP client SDK for the Reclaim Protocol — the programmatic way to use Reclaim Protocol to verify **data points** about your users (a follower count, an account balance, an order). Can be directly integrated by apps to request verification for their users using Reclaim Protocol and verify the results.",
+	"type": "module",
+	"sideEffects": false,
+	"main": "./lib/index.js",
+	"types": "./lib/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./lib/index.d.ts",
+			"import": "./lib/index.js"
+		},
+		"./api": {
+			"types": "./lib/api.d.ts",
+			"import": "./lib/api.js"
+		},
+		"./openapi": {
+			"types": "./lib/types/index.d.ts",
+			"import": "./lib/types/index.js"
+		},
+		"./enckeys": {
+			"types": "./lib/enckeys.d.ts",
+			"import": "./lib/enckeys.js"
+		},
+		"./launch": {
+			"types": "./lib/launch/index.d.ts",
+			"import": "./lib/launch/index.js"
+		}
+	},
+	"files": [
+		"lib",
+		"src",
+		"README.md",
+		"LICENSE"
+	],
+	"engines": {
+		"node": ">=22.0.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/reclaimprotocol/developer-tools.git",
+		"directory": "packages/client"
+	},
+	"homepage": "https://github.com/reclaimprotocol/developer-tools/tree/main/packages/client#readme",
+	"bugs": {
+		"url": "https://github.com/reclaimprotocol/developer-tools/issues"
+	},
+	"websiteUrl": "https://docs.reclaimprotocol.org",
+	"scripts": {
+		"build": "tsc",
+		"prepublishOnly": "npm run build",
+		"dev": "tsc --watch",
+		"test": "node --test-timeout=120000 --test tests/*.test.ts",
+		"check": "tsc -p tsconfig.test.json"
+	},
+	"keywords": [
+		"sdk",
+		"reclaimprotocol",
+		"verification",
+		"http-client"
+	],
+	"author": {
+		"name": "Reclaim Protocol",
+		"email": "support@reclaimprotocol.org"
+	},
+	"license": "MIT",
+	"dependencies": {
+		"@hapi/boom": "^9.1.4",
+		"@noble/hashes": "^2.2.0",
+		"@noble/secp256k1": "^3.1.0",
+		"@reclaimprotocol/attestor-core": "^5.1.6",
+		"canonicalize": "^2.1.0",
+		"eciesjs": "^0.4.15"
+	},
+	"devDependencies": {
+		"@types/node": "^24.0.0",
+		"openapi-typescript": "^7.13.0",
+		"typescript": "^5.9.0",
+		"yaml": "^2.6.0"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	}
+}

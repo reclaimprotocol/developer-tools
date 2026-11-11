@@ -1,0 +1,34 @@
+{
+	"requests": [
+		{
+			"requestId": "page",
+			"method": "GET",
+			"url": "https://www.example-air.com/account/overview",
+			"status": 200,
+			"contentType": "text/html; charset=utf-8",
+			"size": 640,
+			"requestHeaders": {
+				"Cookie": "session=FIXTUREONLY",
+				"Accept": "text/html"
+			},
+			"responseHeaders": { "content-type": "text/html; charset=utf-8" },
+			"responseBody": "<!doctype html><html><head><title>Account</title></head><body><div id=\"svelte\"></div>\n<script>\n\t{\n\t\t__sveltekit_abc = { base: \"\" };\n\t\tconst data = [null,{type:\"data\",data:{user:{firstName:\"Jane\",tierStatus:{currentTierCode:\"TIER_0\",currentTierDescription:\"Atmos™ Member\",tusPointsRemaining:33,nextTierDescription:\"Atmos™ Silver\"},locale:\"en-US\",title:\"My account\"}},uses:{}}];\n\t\tkit.start(app, element, { node_ids: [0, 2], data });\n\t}\n</script></body></html>",
+			"finishedAt": 0
+		},
+		{
+			"requestId": "data",
+			"method": "GET",
+			"url": "https://www.example-air.com/account/overview/__data.json",
+			"status": 200,
+			"contentType": "application/json",
+			"size": 220,
+			"requestHeaders": {
+				"Cookie": "session=FIXTUREONLY",
+				"Accept": "application/json"
+			},
+			"responseHeaders": { "content-type": "application/json" },
+			"responseBody": "{\"type\":\"data\",\"nodes\":[{\"type\":\"skip\"},{\"type\":\"data\",\"data\":[{\"user\":1},{\"firstName\":2,\"tierStatus\":3},\"Jane\",{\"tusPointsRemaining\":33},\"Atmos™ Member\",\"en-US\"]}]}",
+			"finishedAt": 0
+		}
+	]
+}

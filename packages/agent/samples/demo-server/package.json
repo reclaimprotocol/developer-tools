@@ -1,0 +1,14 @@
+{
+  "name": "reclaim-demo-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@reclaimprotocol/js-sdk": "^5.8.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.7.1"
+  }
+}
