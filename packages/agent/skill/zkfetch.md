@@ -78,16 +78,15 @@ const result = await verifyRequestProof(proof, {
 | `attestor-trust-required` | `@reclaimprotocol/client` is older than 0.1.47. Upgrade it, or pass `attestorJwksUrl`. |
 | `Proof by required hash ... was not found` | The hashed request differs from the proven one. Compare URL, method, body, matches, and redactions. |
 | `missing claimAttestation` | `@reclaimprotocol/client` is older than 0.1.46. Upgrade it. |
-| `Gnark library not built for OS/arch` | Remove `zkEngine: 'gnark'`. It only applies with `useTee: false`, where the default `stwo` engine runs everywhere. |
+| `Gnark library not built for OS/arch` | Remove `zkEngine: 'gnark'`. The default TEE path doesn't need it. |
 
 ## Performance
 
-In Builder mode, zkFetch runs in a TEE by default, and a proof takes about 2
-to 3 seconds. Pass `useTee: false` for the standard ZK path, which takes 5 to
-10 seconds, mostly while the attestor verifies the ZK proofs. Platforms
-without the native TEE library (anything other than Linux or macOS on x64 or
-arm64) fall back to the standard path. The TEE library prints its own logs to
-stdout whatever `logs` is set to.
+zkFetch runs in a TEE by default, and a proof takes about 2 to 3 seconds. A
+request stays on the standard ZK path, which takes 5 to 10 seconds, when it
+passes `useTee: false`, sets `zkEngine`, uses an `oprf-raw` redaction hash, or
+runs on a platform without the TEE library. The TEE library prints its own
+logs to stdout whatever `logs` is set to.
 
 Reuse one `ReclaimClient`. The attestor connection keeps Node running, so a
 one-off script ends with `process.exit()`. Don't call zkFetch on a user's
