@@ -439,6 +439,35 @@ test('verifyRequestProof resolves attestors from the Builder JWKS', async() => {
 	assert.equal(result.valid, true, result.reason)
 })
 
+test('verifyRequestProof trusts the Builder JWKS by default', async() => {
+	const result = await verifyRequestProof(await proof(), {
+		hashes: ['0xprovider'],
+		hasNoPii: true,
+		fetchImpl: (async(input) => {
+			assert.equal(
+				String(input),
+				'https://build.reclaimprotocol.org/.well-known/jwks.json',
+			)
+			return new Response(JSON.stringify({
+				keys: [],
+				'x-reclaim-attestors': [ATTESTOR_ADDRESS],
+			}))
+		}),
+	})
+	assert.equal(result.valid, true, result.reason)
+})
+
+test('verifyRequestProof with only attestorAddresses fetches nothing',
+	async() => {
+		const result = await verifyRequestProof(await proof(), {
+			hashes: ['0xprovider'],
+			hasNoPii: true,
+			attestorAddresses: [ATTESTOR_ADDRESS],
+			fetchImpl: (async() => assert.fail('no JWKS fetch expected')),
+		})
+		assert.equal(result.valid, true, result.reason)
+	})
+
 test('verifyResultFull reuses the result JWKS attestor registry', async() => {
 	const vc = generateKeypair()
 	const exactProof = await proof()
