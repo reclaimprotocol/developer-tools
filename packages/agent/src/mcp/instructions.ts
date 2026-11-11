@@ -52,6 +52,7 @@ const BUILDER_TOPIC_FILES: Record<string, string> = {
 	'contributions': 'community-contributions.md',
 	'ai-sessions': 'ai-sessions.md',
 	'integration': 'verification-client-integration.md',
+	'zkfetch': 'zkfetch.md',
 }
 
 /** One line per topic, shown in the `how_it_works` index so a caller can pick
@@ -87,6 +88,9 @@ const TOPIC_SUMMARIES: Record<string, string> = {
 		+ '(local proxy_callback_events or deployed webhook), frontend and '
 		+ 'backend over the HTTP session API, js-sdk projects, trying a '
 		+ 'session without an app; `api=2` and result verification.',
+	'zkfetch': 'Proving a response the developer\'s own server fetches, such '
+		+ 'as an API called with their key: zkFetch in Builder mode with the '
+		+ 'org key, verifyRequestProof, quota, and failures.',
 	'user-script': 'The navigation script (jsUserScripts): sign-in redirect, '
 		+ 'multi-page walk, test_user_script with keep.',
 	'interception': 'injectionType / interceptorType, live interception, the '

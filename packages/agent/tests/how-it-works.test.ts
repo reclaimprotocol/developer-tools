@@ -162,6 +162,10 @@ describe('how_it_works', () => {
 		assert.match(builder('ai-sessions'), /wait_for_ai_session/)
 		assert.match(builder('ai-sessions'), /Fall back to a provider/)
 		assert.match(BUILDER_MODE_INSTRUCTIONS, /AI sessions first/)
+		assert.match(BUILDER_MODE_INSTRUCTIONS, /topic `zkfetch`/)
+		assert.match(builder('zkfetch'), /new ReclaimClient\(\{ orgToken/)
+		assert.match(builder('zkfetch'), /verifyRequestProof/)
+		assert.match(builder('zkfetch'), /trusts the attestors in Builder's JWKS/)
 		assert.match(builder('auth'), /set_devtools_mode/)
 		assert.match(GUIDE_OLD.topics.get('auth')!, /set_devtools_mode/)
 		assert.match(
