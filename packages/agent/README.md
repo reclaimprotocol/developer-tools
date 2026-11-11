@@ -106,7 +106,7 @@ Set `RECLAIM_TELEMETRY=0`, or set `DO_NOT_TRACK=1`, in the `env` block of your M
 
 The MCP server is all you need — it ships a `how_it_works` tool that serves the capture → prove → publish guide **one topic at a time** (`overview`, `auth`, `browser`, `capture`, `draft`, `params`, `prove`, `publish`, `discover`, `user-script`, `interception`, `hash-validation`, `report-bug`, `credentials`, `never-do`, `troubleshooting`). Call it with no arguments for the overview plus the topic index; every response repeats that index, so an agent that guessed wrong self-corrects without a second round-trip. Any MCP client can call it on demand; there's nothing extra to install.
 
-If `@reclaimprotocol/client` or the MCP server itself misbehaves, the `report-bug` topic walks an agent through collecting redacted details and opening a fix PR (preferred) or an issue at [reclaimprotocol/developer-tools](https://github.com/reclaimprotocol/developer-tools). A maintainer ports accepted PRs upstream; when the change syncs back, a bot closes the PR with a link and credits you as co-author.
+If `@reclaimprotocol/client` or the MCP server itself misbehaves, the `report-bug` topic walks an agent through collecting redacted details and opening a fix PR (preferred) or an issue at [reclaimprotocol/developer-tools](https://github.com/reclaimprotocol/developer-tools). A maintainer reviews and merges the PR, and the fix ships in the next release.
 
 ## Using it from your agent
 
@@ -174,7 +174,7 @@ Relevant env vars: `RECLAIM_OLD_API_URL` (default `https://devapi.reclaimprotoco
 
 ## Local development (from source)
 
-For working on the package inside the monorepo (consumers should use [Install](#install) instead). A workspace install only fetches dependencies:
+For working on the package in this repository (consumers should use [Install](#install) instead). A workspace install only fetches dependencies:
 
 ```bash
 npm install
@@ -246,7 +246,7 @@ claude mcp add reclaim -- node "$(pwd)/packages/agent/lib/mcp-bin.js"
   "mcpServers": {
     "reclaim": {
       "command": "node",
-      "args": ["/abs/path/to/builder/packages/agent/lib/mcp-bin.js"]
+      "args": ["/abs/path/to/developer-tools/packages/agent/lib/mcp-bin.js"]
     }
   }
 }
@@ -260,7 +260,7 @@ claude mcp add reclaim -- node "$(pwd)/packages/agent/lib/mcp-bin.js"
   "mcp": {
     "reclaim": {
       "type": "local",
-      "command": ["node", "/absolute/path/to/builder/packages/agent/lib/mcp-bin.js"],
+      "command": ["node", "/absolute/path/to/developer-tools/packages/agent/lib/mcp-bin.js"],
       "enabled": true
     }
   }

@@ -3,7 +3,7 @@
 Use this topic when `@reclaimprotocol/client` or this MCP server
 (`@reclaimprotocol/agent`) is at fault. The public source is
 <https://github.com/reclaimprotocol/developer-tools> (`packages/client`,
-`packages/agent`). It's mirrored from Reclaim's private monorepo.
+`packages/agent`). Fixes are reviewed and merged there.
 
 ## When to use it
 
@@ -67,9 +67,9 @@ After approval:
    The description lists: the problem, the reproduction, the fix, the test,
    and the versions.
 
-Tell the developer what to expect: a maintainer ports it upstream; when the
-change syncs back, a bot closes your PR with a link and you're credited as
-co-author. It isn't "merged" in the usual sense. That's expected.
+Give the developer the pull request link. A maintainer reviews it, and the fix
+ships in the next release after it merges. Until then, use the
+[Workaround](#workaround).
 
 ## If a fix isn't feasible
 

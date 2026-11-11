@@ -4,16 +4,16 @@ Thanks for helping improve the Reclaim developer tools. This guide explains wher
 
 ## What's in this repository
 
-| Path | How it's developed |
+| Path | What it is |
 | --- | --- |
-| Plugins, marketplace metadata, distribution files | Directly in this repository |
-| `docs/`, `README.md`, `llms.txt` | Directly in this repository |
-| `packages/client` (`@reclaimprotocol/client`) | Mirrored from Reclaim's monorepo |
-| `packages/agent` (`@reclaimprotocol/agent`) | Mirrored from Reclaim's monorepo |
+| `packages/client` | `@reclaimprotocol/client`, the typed HTTP client and consumer SDK |
+| `packages/agent` | `@reclaimprotocol/agent`, the Reclaim MCP server |
+| Plugins, marketplace metadata, distribution files | Plugin and marketplace manifests for each agent client |
+| `docs/`, `README.md`, `llms.txt` | Documentation |
 
-Pull requests that change plugins, distribution files, or docs are reviewed and merged here as usual.
+Everything here is developed in this repository, and pull requests are reviewed and merged here. Reclaim's private Builder backend includes this repository as a git submodule, so Builder picks up merged changes when it updates the submodule.
 
-The two packages under `packages/` are the public source of what Reclaim publishes to npm. Reclaim develops them in a private monorepo and mirrors them here through an automated pull request. Because of that, this repository can't merge outside changes to `packages/` directly.
+The `*.gen.ts` files in both packages are generated from Builder's OpenAPI document. Don't edit them by hand. If a fix needs an API change, describe it in your pull request, and a maintainer makes the change in Builder.
 
 ## Contribute a fix to a package
 
@@ -32,15 +32,6 @@ The two packages under `packages/` are the public source of what Reclaim publish
    ```
 
 4. Open a pull request against `main`. The template asks for the problem, the fix, the test, and the versions you used.
-
-### What happens next
-
-1. The `mirror-guard` check fails on your pull request, because it changes `packages/`. This is expected.
-2. A bot adds the `needs-upstream-port` label and posts a comment that explains the process.
-3. A maintainer ports your change to the monorepo and adds you as a co-author, so you get credit in the history.
-4. When the change syncs back, a bot closes your pull request with a link to the sync commit, and you're credited as a co-author.
-
-The other CI checks still run on your pull request, so keep the tests passing while you wait.
 
 ## Report a bug
 

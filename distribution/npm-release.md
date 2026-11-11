@@ -1,11 +1,11 @@
 # npm release
 
-This repository publishes `@reclaimprotocol/client` and `@reclaimprotocol/agent`. The source lives in the private Builder repository and is mirrored here, so you set versions in Builder and release from here.
+This repository publishes `@reclaimprotocol/client` and `@reclaimprotocol/agent`.
 
 ## Release flow
 
-1. In Builder, run `npm run version:bump`. This sets the same version in both packages and pins the agent's `@reclaimprotocol/client` dependency to it.
-2. After the change merges in Builder, the mirror workflow opens or updates the `mirror/builder` pull request in this repository. Merge it (auto-merge is enabled).
+1. On a branch, run `npm run version:bump -- <version>`. This sets the same version in both packages, pins the agent's `@reclaimprotocol/client` dependency to it, syncs the plugin manifests, and refreshes the lockfile.
+2. Open a pull request with the change and merge it.
 3. The merge to `main` runs `.github/workflows/release.yml`, which:
    1. Runs `scripts/release-plan.mjs`. The script fails if the two versions differ or the agent doesn't depend on the exact client version. It checks npm and plans only the versions that are missing, and checks whether the `v<version>` tag exists, so reruns are safe.
    2. The `build` job runs `npm ci`, `npm run build`, and `npm test`, packs both packages, and uploads the tarballs as an artifact. It has read-only permissions and no OIDC identity.

@@ -26,9 +26,9 @@ The server is published to npm as [`@reclaimprotocol/agent`](https://www.npmjs.c
 
 ## Source packages and contributing
 
-The source for [`@reclaimprotocol/client`](packages/client) and [`@reclaimprotocol/agent`](packages/agent) is in `packages/`. Reclaim develops these packages in a private monorepo and mirrors them here, so changes to `packages/` go through a maintainer-assisted port. When the change syncs back, a bot closes the pull request with a link to the sync commit, and the contributor is credited as a co-author. Everything else in this repository is developed here directly.
+The source for [`@reclaimprotocol/client`](packages/client) and [`@reclaimprotocol/agent`](packages/agent) is in `packages/`, and it's developed here.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) to report a bug, propose a fix, or report a vulnerability. Maintainers: set the repository variable `MIRROR_APP_SLUG` to the slug of the mirror GitHub App, and require the `mirror-guard` check in the ruleset for `main`.
+See [CONTRIBUTING.md](CONTRIBUTING.md) to report a bug, propose a fix, or report a vulnerability. Maintainers: see [docs/maintainers.md](docs/maintainers.md) for the repository settings.
 
 ## Contents
 
@@ -297,7 +297,7 @@ npm run sync-version -- 0.2.0   # or set an explicit version
 
 It rewrites every `version` field in the Claude, Cursor, GitHub Copilot, and OMP marketplace catalogs, the Antigravity manifest, and each versioned client plugin manifest while preserving file formatting. The Codex marketplace has no version field.
 
-You usually don't run this by hand. You set the version once in the private monorepo, and the mirror pull request syncs the plugin manifests when the package version changes. Merging that pull request runs `release.yml`, which publishes the packages to npm and the MCP Registry. See [distribution/npm-release.md](distribution/npm-release.md).
+You usually don't run this by hand: `npm run version:bump -- <version>` sets the package versions and runs it for you. Merging the version change runs `release.yml`, which publishes the packages to npm and the MCP Registry. See [distribution/npm-release.md](distribution/npm-release.md).
 
 Validate the manifests before committing:
 

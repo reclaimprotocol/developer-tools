@@ -1,14 +1,12 @@
 # packages/client
 
-> **Contributing from outside Reclaim.** This package is developed upstream in
-> Reclaim's private monorepo and mirrored to
-> [reclaimprotocol/developer-tools](https://github.com/reclaimprotocol/developer-tools).
-> Outside pull requests are welcome. Maintainers port accepted changes
-> upstream. When the change syncs back, a bot closes the pull request. The generated
-> files (`*.gen.ts`) come from Builder's OpenAPI document. Don't edit them by
-> hand; describe the API change in your pull request instead. Paths like
-> `packages/app/...` below refer to the upstream monorepo and aren't in this
-> repository.
+> **Contributing.** This package lives in
+> [reclaimprotocol/developer-tools](https://github.com/reclaimprotocol/developer-tools),
+> and pull requests are merged there. The generated files (`*.gen.ts`) come
+> from Builder's OpenAPI document. Don't edit them by hand; describe the API
+> change in your pull request instead. Paths like `packages/app/...` below
+> refer to Reclaim's private Builder repository, which includes this repository
+> as a git submodule, and aren't in this repository.
 
 Typed SDK client for `@reclaimprotocol/app`. Single responsibility: provide a type-safe `ReclaimClient` that maps every openapi operation to a fetch call. Used directly by `@reclaimprotocol/agent` and by any external consumer that wants programmatic API access without the full agent.
 
@@ -40,7 +38,7 @@ const orgs = await client.call('ListOrgs', { params: {}, query: {}, body: {} })
 
 ## Source of truth
 
-In the upstream monorepo, `packages/app/openapi.yaml` is the single source of truth. Run:
+In Builder, `packages/app/openapi.yaml` is the single source of truth. Run:
 
 ```bash
 npm run openapi:gen --workspace=packages/app

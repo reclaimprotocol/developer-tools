@@ -1,11 +1,17 @@
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const server = JSON.parse(await readFile('server.json', 'utf8'));
 const version = server.packages[0].version;
+// Run outside this repository: its workspaces include a local, unbuilt
+// @reclaimprotocol/agent, which npx would otherwise run instead of the
+// published package.
+const cwd = await mkdtemp(join(tmpdir(), 'builder-mcp-check-'));
 const child = spawn('npx', ['-y', '--package=@reclaimprotocol/agent@' + version, 'reclaim-mcp-server'], {
-  stdio: ['pipe', 'pipe', 'pipe'], detached: process.platform !== 'win32',
+  cwd, stdio: ['pipe', 'pipe', 'pipe'], detached: process.platform !== 'win32',
 });
 // Server stderr can include private diagnostic data: do not print it in CI.
 child.stderr.resume();

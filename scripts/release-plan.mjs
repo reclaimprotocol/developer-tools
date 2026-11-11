@@ -72,7 +72,7 @@ function defaultRun(command, args, env) {
 
 /** Returns the versions of a package on npm, or [] when it was never published. */
 export async function fetchPublishedVersions(name, fetchFn = fetch) {
-	const response = await fetchFn(`https://registry.npmjs.org/${name.replace('/', '%2F')}`, {
+	const response = await fetchFn(`https://registry.npmjs.org/${encodeURIComponent(name)}`, {
 		headers: { accept: 'application/json' },
 	})
 	if (response.status === 404) {

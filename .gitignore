@@ -6,6 +6,6 @@ __pycache__/
 .venv/
 .env*
 !.env.example
-# Test-only dummy values, mirrored from builder.
+# Test-only dummy values.
 !packages/agent/.test.env
 .mcpregistry_*

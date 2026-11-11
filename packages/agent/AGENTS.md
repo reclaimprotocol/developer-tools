@@ -1,14 +1,12 @@
 # packages/agent
 
-> **Contributing from outside Reclaim.** This package is developed upstream in
-> Reclaim's private monorepo and mirrored to
-> [reclaimprotocol/developer-tools](https://github.com/reclaimprotocol/developer-tools).
-> Outside pull requests are welcome. Maintainers port accepted changes
-> upstream. When the change syncs back, a bot closes the pull request. The generated
-> files (`*.gen.ts`) come from Builder's OpenAPI document. Don't edit them by
-> hand; describe the API change in your pull request instead. Paths like
-> `packages/app/...` below refer to the upstream monorepo and aren't in this
-> repository.
+> **Contributing.** This package lives in
+> [reclaimprotocol/developer-tools](https://github.com/reclaimprotocol/developer-tools),
+> and pull requests are merged there. The generated files (`*.gen.ts`) come
+> from Builder's OpenAPI document. Don't edit them by hand; describe the API
+> change in your pull request instead. Paths like `packages/app/...` below
+> refer to Reclaim's private Builder repository, which includes this repository
+> as a git submodule, and aren't in this repository.
 
 MCP server + agent tools for `@reclaimprotocol`. Depends on `@reclaimprotocol/client` for the typed HTTP client; adds browser automation, capture, synthesis, and proof tools on top.
 
@@ -36,7 +34,7 @@ The MCP server has these layers of tools, all wired up in `src/mcp/start.ts`:
 
 ## Source of truth
 
-In the upstream monorepo, `packages/app/openapi.yaml` is the single source of truth for all operations. Run:
+In Builder, `packages/app/openapi.yaml` is the single source of truth for all operations. Run:
 
 ```bash
 npm run openapi:gen --workspace=packages/app
@@ -99,7 +97,7 @@ Inherit repo-wide conventions from the root `AGENTS.md`. Specific to this packag
    `@reclaimprotocol/client`. Never duplicate either implementation.
 3. `assert(cond, boomError)` instead of `if(!cond) throw`.
 4. Logging via `src/logger.ts`. No `console.log`.
-5. Run lint and typecheck from the monorepo root before committing.
+5. Run lint and typecheck from the repository root before committing.
 
 ## MCP Tool Patterns
 
