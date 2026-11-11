@@ -279,6 +279,7 @@ Everything the `how_it_works` tool serves lives in `skill/` as markdown — edit
 | `SKILL.builder.md`, `SKILL.old.md` | The authoring guide per backend, split into `<!-- topic: name -->` blocks. Each block is one `how_it_works` topic. |
 | `SKILL.common.md` | Prose shared by both guides, in `<!-- section: name -->` blocks. A guide splices one in with `<!-- common: name -->`. |
 | `user-script.md`, `interception.md`, `hash-validation.md` | Backend-independent topics, served as-is to both modes. |
+| `zkfetch.md` | Builder-only `zkfetch` topic: proving a server-side fetch with zkFetch in Builder mode. |
 | `js-sdk-integration.md` | Served by the old-devtools `get_js_sdk_integration_guide` tool, not by `how_it_works`. |
 
 Two mechanics to know when editing:

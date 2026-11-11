@@ -461,6 +461,8 @@ them all; the Builder runs them in one session.
 
 <!-- topic: integration -->
 
+<!-- topic: zkfetch -->
+
 <!-- topic: never-do -->
 ## Things to never do
 

@@ -74,7 +74,10 @@ export function defineTool<TArgs>(
 export function errorAsToolText(err: unknown): string {
 	if(isProblemError(err)) {
 		const detail = err.data.detail
-		return detail ? `${err.message}: ${detail}` : err.message
+		// A Builder API error's message is its detail, so lead with the title
+		// instead of repeating it. A hand-thrown Boom keeps its own message.
+		const lead = err.message === detail ? err.data.title : err.message
+		return detail ? `${lead}: ${detail}` : err.message
 	}
 
 	if(isBoom(err) && err.output?.statusCode) {

@@ -8,6 +8,7 @@ Provider-authoring and verification tools for the Builder backend.
 
 - "Add Reclaim to my app" or similar: call `start_integration` first (it defaults to AI sessions) and follow its plan. Don't ask what they want to do with the result.
 - A claim about a user's account on a site (for example, "prove the user is a student at example.edu"): use AI sessions first (topic `ai-sessions`). Author a provider only as the fallback, or when they name or ask to reuse one (topic `discover`).
+- Proving data the developer's own server fetches, such as an API response, with no end user: use zkFetch (topic `zkfetch`).
 - Intent unclear: ask one short question.
 
 ## Authoring rules
@@ -48,6 +49,6 @@ Treat every ID, version, URL, and value as opaque: copy it from the latest tool 
 `how_it_works({})` lists topics. Fetch only the one for your next step:
 
 - `overview`: authoring checklist; `prove`, `publish`, `browser`: the details behind each step.
-- `ai-sessions`: the first route for proving a claim; `integration`: app integration, trying a session without an app, existing `@reclaimprotocol/js-sdk` projects.
+- `ai-sessions`: the first route for proving a claim; `integration`: app integration, trying a session without an app, existing `@reclaimprotocol/js-sdk` projects; `zkfetch`: proving a server-side fetch.
 - `auth`: sign-in (`get_me`, then `authenticate` on 401) and backend mode.
 - `report-bug`: a bug in `@reclaimprotocol/client` or this MCP server.

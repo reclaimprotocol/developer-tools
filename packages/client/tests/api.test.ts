@@ -10,6 +10,7 @@ import {
 	isProblemError,
 	ReclaimClient,
 } from '../src/api.ts'
+import { isTransientError } from '../src/errors.ts'
 import * as root from '../src/index.ts'
 import type { VerificationRuntimeConfig } from '../src/types/openapi.ts'
 import { stubFetch } from './fetch.ts'
@@ -102,6 +103,34 @@ describe('@reclaimprotocol/client/api', () => {
 				assert.equal(error instanceof Boom, true)
 				assert.equal(error.output.statusCode, 404)
 				assert.equal(error.data.title, 'Session not found')
+				return true
+			},
+		)
+	})
+
+	it('keeps the billing link of a quota refusal and stops retries', async() => {
+		const billingUrl = 'https://builder.test/orgs/org-1?tab=billing'
+		const detail = `Verification limit reached. Upgrade at ${billingUrl}`
+		const { fetch } = stubFetch(() => new Response(JSON.stringify({
+			title: 'Too Many Requests',
+			status: 429,
+			detail,
+			billingUrl,
+		}), {
+			status: 429,
+			headers: { 'Content-Type': 'application/problem+json' },
+		}))
+		const client = new ReclaimClient({ baseUrl: 'https://builder.test', fetch })
+
+		await assert.rejects(
+			client.call('GetVerificationSession', {
+				params: { sessionId: 'any' },
+			}),
+			(error) => {
+				assert.ok(isProblemError(error))
+				assert.equal(error.message, detail)
+				assert.equal(error.data.billingUrl, billingUrl)
+				assert.equal(isTransientError(error), false)
 				return true
 			},
 		)

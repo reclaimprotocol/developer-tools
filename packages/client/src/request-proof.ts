@@ -1,4 +1,5 @@
 import { createSignDataForClaim } from '@reclaimprotocol/attestor-core'
+import { DEFAULT_BASE_URL } from './consts.ts'
 import { recoverEip191Address } from './eip191.ts'
 import { isTransientFailure, networkStep } from './errors.ts'
 import { fetchReclaimJwks, trustedAttestorAddresses } from './jwks.ts'
@@ -45,13 +46,18 @@ export interface VerifyRequestProofOptions {
 	/** Require every witness to carry a `claimAttestation`, and verify any
 	 *  `attestation_report` against `expectedImageDigests`. */
 	attestorTeeAttestation?: AttestorTeeAttestationConfig
-	/** Explicit trusted attestor ETH addresses. */
+	/** Explicit trusted attestor ETH addresses. Given without
+	 *  `attestorJwksUrl`, these are the only attestors trusted, and nothing is
+	 *  fetched. */
 	attestorAddresses?: string[]
 	/** Trusted attestor image digests, like `x-reclaim-attestor-image-digests`.
 	 *  Pin any `attestation_report` a witness carries without requiring one,
 	 *  matching `@reclaimprotocol/js-sdk`'s default. */
 	attestorImageDigests?: string[]
-	/** Trusted Builder JWKS registry containing attestor-purpose keys. */
+	/** Trusted Builder JWKS registry containing attestor-purpose keys.
+	 *  Defaults to Builder's `/.well-known/jwks.json` at
+	 *  `https://build.reclaimprotocol.org`, unless `attestorAddresses` is
+	 *  given. */
 	attestorJwksUrl?: string
 	fetchImpl?: typeof fetch
 	/** Builder session id. Requires a resolver without hashes or a provider. */
@@ -89,6 +95,8 @@ export interface ReclaimRequestProofOutcome {
 	data?: TrustedData[]
 	publicData?: unknown[]
 }
+
+const DEFAULT_ATTESTOR_JWKS_URL = `${DEFAULT_BASE_URL}/.well-known/jwks.json`
 
 /** Return the provider hashes encoded in an exact request proof. */
 export function proofHashes(proof: ReclaimRequestProof): string[] {
@@ -181,7 +189,9 @@ async function resolveValidation(
 async function resolveAttestorTrust(config: VerifyRequestProofOptions) {
 	const addresses = config.attestorAddresses?.map(normalized) ?? []
 	const imageDigests = config.attestorImageDigests?.map(normalized) ?? []
-	const { attestorJwksUrl, fetchImpl } = config
+	const { fetchImpl } = config
+	const attestorJwksUrl = config.attestorJwksUrl
+		?? (config.attestorAddresses ? undefined : DEFAULT_ATTESTOR_JWKS_URL)
 	if(attestorJwksUrl) {
 		const registry = await networkStep(() => (
 			fetchReclaimJwks(attestorJwksUrl, fetchImpl)

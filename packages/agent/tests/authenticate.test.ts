@@ -402,7 +402,11 @@ describe('sessionRefreshingFetch', () => {
 
 		await assert.rejects(
 			() => client.call('ListOrgs', { query: {} }),
-			/Unauthorized/,
+			(err: { output: { statusCode: number }, message: string }) => {
+				assert.equal(err.output.statusCode, 401)
+				assert.match(err.message, /could not be refreshed/)
+				return true
+			},
 		)
 		assert.equal(readStoredSession()?.refreshToken, undefined)
 	})

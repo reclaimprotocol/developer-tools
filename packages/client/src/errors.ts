@@ -48,7 +48,9 @@ export function isProblemError(error: unknown): error is ProblemError {
  * Whether retrying the same request later can succeed: a network failure, a
  * timeout, or an HTTP 5xx, 408, or 429 from Builder (a {@link ProblemError}
  * or a plain error carrying the HTTP `status`). Everything else, such as a
- * malformed response, won't change on retry.
+ * malformed response, won't change on retry. A quota refusal (a 429 that
+ * carries `billingUrl`) lasts until the billing period resets or someone
+ * upgrades the plan, so it isn't transient.
  */
 export function isTransientError(error: unknown): boolean {
 	// `fetch` rejects with a TypeError when the network fails.
@@ -61,6 +63,10 @@ export function isTransientError(error: unknown): boolean {
 		&& (error.name === 'TimeoutError' || error.name === 'AbortError')
 	) {
 		return true
+	}
+
+	if(isProblemError(error) && error.data.billingUrl) {
+		return false
 	}
 
 	const status = isProblemError(error)
@@ -109,6 +115,7 @@ export function isProblemDetails(value: unknown): value is ProblemDetails {
 		&& isOptionalString(value.instance)
 		&& isOptionalString(value.event)
 		&& isOptionalString(value.sessionId)
+		&& isOptionalString(value.billingUrl)
 }
 
 /** Reads an RFC 9457 response, with a status-only fallback for other bodies. */
@@ -156,7 +163,9 @@ export async function throwProblemError(res: Response): Promise<never> {
 			},
 		},
 	} satisfies Omit<ProblemError, keyof Error>
-	const error = Object.assign(new Error(title), fields)
+	// Like Boom, the message is the occurrence's detail, so logging the error
+	// shows what happened and, for a quota refusal, the billing link.
+	const error = Object.assign(new Error(problem.detail || title), fields)
 	error.name = 'ProblemError'
 	throw error
 }
