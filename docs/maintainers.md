@@ -18,7 +18,7 @@ Use rulesets (**Settings > Rules > Rulesets**) rather than classic branch protec
 Target: the default branch. Enforcement: **Active**. Bypass list: **empty**.
 
 - Require a pull request before merging, with at least one approval.
-- Require review from Code Owners. Replace the placeholder team in `.github/CODEOWNERS` first.
+- Require review from Code Owners. Every owner in `.github/CODEOWNERS` needs write access to this repository.
 - Require the status check `ci` to pass.
 - Block force pushes and deletions.
 

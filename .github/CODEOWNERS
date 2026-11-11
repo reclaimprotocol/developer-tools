@@ -1,3 +1,5 @@
-# @reclaimprotocol/developer-tools-maintainers is a placeholder team. Create it
-# (or replace it with an existing team) before you require code owner review.
-* @reclaimprotocol/developer-tools-maintainers
+# Code owners review every change in this repository.
+# Add @reclaimprotocol/core here after the team is given write access to this
+# repository (Settings > Collaborators and teams). GitHub ignores owners
+# without write access.
+* @predatorx7
