@@ -70,3 +70,7 @@ test('fetchPublishedVersions reads the versions map, treats 404 as empty, throws
 	assert.deepEqual(await fetchPublishedVersions('@a/b', respond(404, {})), [])
 	await assert.rejects(fetchPublishedVersions('@a/b', respond(500, {})), /500/)
 })
+
+test('fails when the root version differs from the packages', () => {
+	assert.throws(() => planRelease({ root: { version: '1.2.4' }, client, agent, published: {} }), /npm run version:bump/)
+})

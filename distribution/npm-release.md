@@ -4,7 +4,7 @@ This repository publishes `@reclaimprotocol/client` and `@reclaimprotocol/agent`
 
 ## Release flow
 
-1. On a branch, run `npm run version:bump -- <version>`. This sets the same version in both packages, pins the agent's `@reclaimprotocol/client` dependency to it, syncs the plugin manifests, and refreshes the lockfile.
+1. On a branch, set `version` in the root `package.json`, then run `npm run version:bump`. (`npm run version:bump -- <version>` does both.) This sets the same version in both packages, pins the agent's `@reclaimprotocol/client` dependency to it, syncs the plugin and marketplace manifests, and refreshes the lockfile. CI fails if any of these drift from the root version.
 2. Open a pull request with the change and merge it.
 3. The merge to `main` runs `.github/workflows/release.yml`, which:
    1. Runs `scripts/release-plan.mjs`. The script fails if the two versions differ or the agent doesn't depend on the exact client version. It checks npm and plans only the versions that are missing, and checks whether the `v<version>` tag exists, so reruns are safe.

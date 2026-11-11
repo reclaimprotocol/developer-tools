@@ -6,9 +6,13 @@ import { dirname, join, resolve } from 'path'
 import { fileURLToPath } from 'url'
 
 /**
- * Sets one release version everywhere:
+ * Sets one release version everywhere. The root `package.json` `version` is
+ * the source of truth: edit it, then run
  *
- *   npm run version:bump -- 0.2.0
+ *   npm run version:bump             # propagate the root version
+ *   npm run version:bump -- 0.2.0    # or set the root version and propagate it
+ *
+ * It updates:
  *
  * 1. The `version` of `@reclaimprotocol/client` and `@reclaimprotocol/agent`.
  * 2. The agent's dependency on the client, pinned to that exact version, so a
@@ -27,9 +31,27 @@ const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
 main()
 
 function main() {
-	const version = process.argv.slice(2).find((arg) => !arg.startsWith('--'))
-	if(!version || !SEMVER.test(version)) {
-		console.error('Usage: npm run version:bump -- <x.y.z[-pre]>')
+	const rootPath = join(ROOT, 'package.json')
+	const arg = process.argv.slice(2).find((a) => !a.startsWith('--'))
+	if(arg) {
+		if(!SEMVER.test(arg)) {
+			console.error(`"${arg}" isn't a valid version. Expected x.y.z[-pre].`)
+			process.exit(1)
+		}
+
+		writeFileSync(
+			rootPath,
+			readFileSync(rootPath, 'utf8')
+				.replace(/("version"\s*:\s*")[^"]*(")/, `$1${arg}$2`),
+		)
+	}
+
+	const { version } = JSON.parse(readFileSync(rootPath, 'utf8'))
+	if(typeof version !== 'string' || !SEMVER.test(version)) {
+		console.error(
+			`The root package.json version "${version}" isn't valid. `
+				+ 'Expected x.y.z[-pre].',
+		)
 		process.exit(1)
 	}
 

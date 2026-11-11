@@ -297,7 +297,7 @@ npm run sync-version -- 0.2.0   # or set an explicit version
 
 It rewrites every `version` field in the Claude, Cursor, GitHub Copilot, and OMP marketplace catalogs, the Antigravity manifest, and each versioned client plugin manifest while preserving file formatting. The Codex marketplace has no version field.
 
-You usually don't run this by hand: `npm run version:bump -- <version>` sets the package versions and runs it for you. Merging the version change runs `release.yml`, which publishes the packages to npm and the MCP Registry. See [distribution/npm-release.md](distribution/npm-release.md).
+You usually don't run this by hand. The root `package.json` `version` is the release version: edit it and run `npm run version:bump`, which sets the package versions and runs this for you. Merging the version change runs `release.yml`, which publishes the packages to npm and the MCP Registry. See [distribution/npm-release.md](distribution/npm-release.md).
 
 Validate the manifests before committing:
 

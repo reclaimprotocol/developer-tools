@@ -17,7 +17,12 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
  * Pure planning logic. `published` maps a package name to the list of
  * versions already on npm.
  */
-export function planRelease({ client, agent, published, tagExists = false }) {
+export function planRelease({ root, client, agent, published, tagExists = false }) {
+	if (root && root.version !== client.version) {
+		throw new Error(
+			`Version drift: the root package.json is ${root.version} but the packages are ${client.version}. Run npm run version:bump.`
+		)
+	}
 	if (client.version !== agent.version) {
 		throw new Error(`Lockstep violation: client is ${client.version} but agent is ${agent.version}.`)
 	}
@@ -87,6 +92,7 @@ export async function fetchPublishedVersions(name, fetchFn = fetch) {
 
 async function main() {
 	const read = (dir) => JSON.parse(readFileSync(join(ROOT, 'packages', dir, 'package.json'), 'utf8'))
+	const root = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
 	const client = read('client')
 	const agent = read('agent')
 	const published = {
@@ -94,7 +100,7 @@ async function main() {
 		[agent.name]: await fetchPublishedVersions(agent.name),
 	}
 	const tagExists = tagExistsInRepo(`v${agent.version}`)
-	const plan = planRelease({ client, agent, published, tagExists })
+	const plan = planRelease({ root, client, agent, published, tagExists })
 	const lines = Object.entries(plan).map(([key, value]) => `${key}=${value}`).join('\n') + '\n'
 	if (process.env.GITHUB_OUTPUT) {
 		appendFileSync(process.env.GITHUB_OUTPUT, lines)
