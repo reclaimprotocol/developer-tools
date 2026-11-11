@@ -103,12 +103,14 @@ jobs:
           name: npm-tarballs
           path: dist
       # No NODE_AUTH_TOKEN: npm authenticates with the workflow's OIDC identity.
+      # The ./ matters: without it, npm reads dist/<file>.tgz as a GitHub
+      # owner/repo shorthand and tries to clone it.
       - name: Publish @reclaimprotocol/client
         if: env.CLIENT_PUBLISH == 'true'
-        run: npm publish "dist/reclaimprotocol-client-${VERSION}.tgz" --provenance --access public
+        run: npm publish "./dist/reclaimprotocol-client-${VERSION}.tgz" --provenance --access public
       - name: Publish @reclaimprotocol/agent
         if: env.AGENT_PUBLISH == 'true'
-        run: npm publish "dist/reclaimprotocol-agent-${VERSION}.tgz" --provenance --access public
+        run: npm publish "./dist/reclaimprotocol-agent-${VERSION}.tgz" --provenance --access public
 
   # Runs after a successful publish, or when nothing needed publishing (every
   # version is already on npm) but the tag is missing, as on a rerun after a
