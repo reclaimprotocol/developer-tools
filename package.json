@@ -14,8 +14,7 @@
 		"check": "npm run check --workspaces --if-present",
 		"lint": "eslint .",
 		"lint:fix": "npm run lint -- --fix",
-		"version:bump": "node scripts/bump-version.ts",
-		"sync-version": "node scripts/sync-version.ts"
+		"version:bump": "node scripts/bump-version.ts"
 	},
 	"engines": {
 		"node": ">=22.19"

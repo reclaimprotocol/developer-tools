@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import assert from 'assert'
 import { execFileSync } from 'child_process'
 import { readFileSync, writeFileSync } from 'fs'
 import { dirname, join, resolve } from 'path'
@@ -17,7 +18,9 @@ import { fileURLToPath } from 'url'
  * 1. The `version` of `@reclaimprotocol/client` and `@reclaimprotocol/agent`.
  * 2. The agent's dependency on the client, pinned to that exact version, so a
  *    published agent always installs its matching client.
- * 3. The plugin and marketplace manifests, through `scripts/sync-version.ts`.
+ * 3. Every `version` in the plugin and marketplace manifests (`MANIFESTS`).
+ *    The plugins run the published agent through npx, so they track its
+ *    version.
  * 4. `package-lock.json`.
  *
  * Only `version` values and dependency pins are rewritten, so each file keeps
@@ -26,6 +29,22 @@ import { fileURLToPath } from 'url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PACKAGES = ['packages/client/package.json', 'packages/agent/package.json']
+// Marketplace files hold two `version` keys (the marketplace and the plugin
+// entry); both are set. The Codex marketplace has no version, so only its
+// plugin manifest is listed. The root plugin.json is the Antigravity plugin,
+// and gemini-extension.json is the Gemini CLI extension manifest.
+const MANIFESTS = [
+	'.claude-plugin/marketplace.json',
+	'.cursor-plugin/marketplace.json',
+	'.github/plugin/marketplace.json',
+	'.omp-plugin/marketplace.json',
+	'gemini-extension.json',
+	'plugin.json',
+	'reclaim/.claude-plugin/plugin.json',
+	'reclaim/.codex-plugin/plugin.json',
+	'reclaim/.cursor-plugin/plugin.json',
+	'reclaim/.github/plugin/plugin.json',
+]
 const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
 
 main()
@@ -73,11 +92,17 @@ function main() {
 		console.log(`  ✓ ${rel}`)
 	}
 
-	execFileSync(
-		process.execPath,
-		[join(ROOT, 'scripts/sync-version.ts'), version],
-		{ stdio: 'inherit' },
-	)
+	for(const rel of MANIFESTS) {
+		const abs = join(ROOT, rel)
+		const text = readFileSync(abs, 'utf8')
+		assert(/"version"\s*:/.test(text), `${rel} has no "version" field.`)
+		writeFileSync(
+			abs,
+			text.replace(/("version"\s*:\s*")[^"]*(")/g, `$1${version}$2`),
+		)
+		console.log(`  ✓ ${rel}`)
+	}
+
 	execFileSync(
 		'npm',
 		['install', '--package-lock-only', '--ignore-scripts'],
