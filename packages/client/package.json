@@ -1,7 +1,7 @@
 {
 	"name": "@reclaimprotocol/client",
 	"title": "Reclaim Client",
-	"version": "0.1.46",
+	"version": "0.1.47",
 	"description": "Typed SDK/HTTP client SDK for the Reclaim Protocol — the programmatic way to use Reclaim Protocol to verify **data points** about your users (a follower count, an account balance, an order). Can be directly integrated by apps to request verification for their users using Reclaim Protocol and verify the results.",
 	"type": "module",
 	"sideEffects": false,
