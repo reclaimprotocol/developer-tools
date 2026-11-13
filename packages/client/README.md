@@ -26,6 +26,7 @@ root in trusted runtimes that need proof verification, signing, or encryption.
 - [API reference](#api-reference)
 - [Crypto and key helpers](#crypto-and-key-helpers)
 - [`ReclaimClient` low-level API](#reclaimclient-low-level)
+- [Email proofs](#email-proofs)
 - [Security notes](#security-notes)
 
 ## Choose an entry point
@@ -37,6 +38,8 @@ Use the narrowest entry point that fits the code:
 | `@reclaimprotocol/client/api` | Browser Verification Clients, frontend dashboards, agents, and backend API calls | Browser-safe `fetch` transport plus OpenAPI-generated operation and schema types |
 | `@reclaimprotocol/client` | Consumer backends and other trusted runtimes | API client, session workflows, result verification, proof verification, legacy signing, and encryption |
 | `@reclaimprotocol/client/openapi` | Type-only integrations | OpenAPI-generated types only |
+| `@reclaimprotocol/client/email` | Consumer backends that verify email proofs | `verifyEmailProof` and its types. See [Email proofs](#email-proofs) |
+| `@reclaimprotocol/client/email/*` | Reclaim Portal and the AI SDK | The email verification core: `core`, `protocol`, `contracts`, `schemas`, `sender`, `google`, `preview`, and `ai` |
 
 Both runtime entry points export the exact same `ReclaimClient`,
 `ReclaimClientOptions`, `ProblemError`, and OpenAPI-generated types. The package
@@ -801,6 +804,41 @@ result after its signed deadline. This option doesn't bypass Builder Session
 expiry, issuer trust, session binding, proof verification, or application-level
 replay prevention.
 
+An AI-session result can also carry email proofs. Each email entry in
+`results[].requests[]` has `method: 'email'`, an `email-v1` proof, and
+`email: { provider, sender, dkimSigner, request }`. `verifyResultFull` verifies
+it with [`verifyEmailProof`](#email-proofs) against the entry's `request`, and
+the outcome includes `method: 'email'`, `emailProvider`, `sender`,
+`dkimSigner`, `authenticatedAddress`, `extractedParameters`, and `emailCheck`.
+Two options control it:
+
+- `emailVerification`: `'signature'` (default) or `'full'`. See
+  [Email proofs](#email-proofs) for what each mode checks.
+- `emailIssuers`: Reclaim Portal signer addresses that you trust, in addition
+  to the `x-reclaim-email-issuers` list in Builder's JWKS. A malformed
+  address throws a 400 error instead of failing the result.
+- `allowEmailProofs`: `hashes`, `proofRecipes`, and
+  `proofValidation.hashes`/`providerId` pin which Reclaim proofs you accept,
+  and they can't describe an email proof. When you set any of them, an email
+  entry fails with `email-not-allowed` unless you also set
+  `allowEmailProofs: true`.
+
+An email entry must carry its `email.request`, and its `email.provider`,
+`email.sender`, and `email.dkimSigner` must match the verified proof;
+otherwise it fails with `email-proof-invalid`.
+
+A failed email entry makes the result fail with `invalid-proof`, and the
+entry's `reason` is `email-issuer-not-trusted`, `email-proof-invalid`,
+`email-not-allowed`, or `email-full-verification-unavailable`. Only
+`email-full-verification-unavailable` makes the error `retryable`, because a
+redelivery can succeed after you fix the host.
+
+Email proofs expire one hour after Portal issues them. Builder verifies each
+proof before it signs the result, so `verifyResultFull` checks email proof
+expiry at the result's signed `iat`, and a stored or redelivered result stays
+verifiable. Pass `now` to check at another time. `full` mode re-checks DKIM
+against current DNS, so it can fail later if the sender rotates its key.
+
 The result's `extracted_parameters` and `content_hash` fields are signed
 diagnostics. Use the verified data returned for each proof in
 `result.proofs[].data`; do not trust the diagnostic copies for an authorization
@@ -931,6 +969,61 @@ Errors are thrown as the same Boom-compatible `ProblemError` exported by
 `USER_AGENT`, and encoding helpers (`b64url`, `base64urlToBytes`, `bytesToHex`,
 `hexToBytes`) are also exported. The `call` method is fully typed against the
 generated OpenAPI operations.
+
+## Email proofs
+
+Reclaim Portal issues an `email-v1` proof when a user shares an email from
+their mailbox. Verify it on your backend with `verifyEmailProof`:
+
+```ts
+import { verifyEmailProof } from '@reclaimprotocol/client/email'
+
+const outcome = await verifyEmailProof(proof, {
+  trustedIssuers: ['0xPortalSignerAddress'],
+  request, // the EmailRequest the proof answers
+})
+console.log(outcome.authenticatedAddress, outcome.extractedParameters)
+```
+
+The email entry points are server-only and need Node.js 22.19 or later.
+Neither the package root nor `/api` loads them; `verifyResultFull` loads
+`/email` only when a result contains an email proof.
+
+`verifyEmailProof` has two modes:
+
+- **`signature`** (default) checks that the proof's identifier matches its
+  canonical parameters and context, that the EIP-191 signature recovers to the
+  proof's issuer, and that the issuer is in `trustedIssuers`. It checks that the
+  signed digest matches the email proof, that the raw email matches its digest,
+  that the extracted values match the signed context, and that the proof hasn't
+  expired at `now` (default: the current time). Each `trustedIssuers` entry
+  must be `0x` and 40 hex digits; a malformed one throws a 400 error. When you
+  pass `request`, it also checks the app, owner, session,
+  nonce, request hash, sender, provider, context, and issue time against it.
+  This mode needs only the package's regular dependencies.
+- **`full`** requires `request` and does everything in `signature` mode. It
+  also re-verifies the DKIM signature, re-parses the email, extracts
+  attachment text in a Bubblewrap sandbox, and re-checks the evidence for each
+  extracted value. It runs only on Linux with Bubblewrap 0.12 or later at
+  `/usr/bin/bwrap` (or `EMAIL_DOCUMENT_BWRAP`), `/usr/bin/prlimit`, and user
+  namespaces. Install the optional peer dependencies listed in
+  `package.json`. When the host can't run it, `full` mode throws
+  `email-full-verification-unavailable`; it never falls back to `signature`.
+
+Failures are Boom errors with a `reason` (also in `error.data.reason`):
+
+| `reason` | Status | Meaning |
+| --- | --- | --- |
+| `email-proof-invalid` | 422 | The proof is malformed, altered, expired, or doesn't answer `request` |
+| `email-issuer-not-trusted` | 403 | A valid signature from a signer that isn't in `trustedIssuers` |
+| `email-full-verification-unavailable` | 501 | `full` mode can't run on this host |
+| `email-request-required` | 400 | `full` mode was called without `request` |
+
+The `/email/core`, `/email/google`, `/email/preview`, and `/email/ai` entry
+points need the optional peer dependencies. `/email/protocol`,
+`/email/contracts`, `/email/schemas`, and `/email/sender` don't. Each
+`EmailRequest` names its mailbox `provider`; `EMAIL_PROVIDERS` lists the
+supported values (currently `gmail`).
 
 ## Security notes
 

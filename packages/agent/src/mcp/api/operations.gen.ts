@@ -1,4 +1,4 @@
-// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:bd379584571e).
+// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:003acf6254ed).
 // Do not edit by hand: Reclaim regenerates this file upstream.
 // @ts-nocheck
 
@@ -575,7 +575,7 @@ export const MCP_TOOLS = {
 						},
 						"isEmailVerificationAllowed": {
 							"type": "boolean",
-							"description": "Defaults to `false`. If `true`, the share page offers the user a choice to verify using email instead of signing in. If you omit it, the page doesn't offer that choice."
+							"description": "Defaults to `false`. If `true`, the share page offers the user a choice to verify with an email from the brand instead of signing in, when Builder isn't sure where the user signs in: several pages, one page below 0.8 confidence, or a website start that failed. If no login page is found, the session doesn't fail: it becomes `ready` with no `candidates`, and the user can verify only by email. If you omit it, the page doesn't offer that choice."
 						},
 						"context": {
 							"type": "object",
