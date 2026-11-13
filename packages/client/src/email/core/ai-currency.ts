@@ -2,8 +2,23 @@
 import { canonicalEmailNumber } from './ai-decimal.ts'
 import { CURRENCY_ALIASES, CURRENCY_NAMES } from './currency-data.ts'
 
-const space = /^[ \t\r\n\u00a0\u202f]+|[ \t\r\n\u00a0\u202f]+$/g
-const trim = (text: string) => text.replace(space, '')
+const SPACES = new Set([' ', '\t', '\r', '\n', '\u00a0', '\u202f'])
+// A scan instead of /^[\u2026]+|[\u2026]+$/g, which backtracks quadratically on long
+// runs of inner whitespace.
+const trim = (text: string) => {
+	let start = 0
+	let end = text.length
+	while(start < end && SPACES.has(text[start])) {
+		start++
+	}
+
+	while(end > start && SPACES.has(text[end - 1])) {
+		end--
+	}
+
+	return text.slice(start, end)
+}
+
 const label = (text: string) => trim(text.normalize('NFKC').replace(/[\u061c\u200e\u200f]/g, '')).replace(
 	/[ \t\r\n\u00a0\u202f]+/g,
 	' ',
