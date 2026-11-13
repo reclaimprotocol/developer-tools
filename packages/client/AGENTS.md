@@ -64,9 +64,14 @@ src/
     openapi.ts      Typed helpers — IOperationId, IOperationArgs<T>, IOperationResponse<T>
     index.ts        Re-exports from openapi.ts + openapi.gen.ts
   routes.gen.ts     GENERATED — { operationId → { method, path } } used by ReclaimClient.call()
+  email/            Server-only email proofs (Node.js 22.19+), never imported by `/api` or statically by the root
+    index.ts        `/email` — verifyEmailProof (signature and full modes)
+    core/           `/email/core`, `/email/protocol`, … — copy of the email verification core
+    lib/email/*.mjs Sandboxed document workers; `npm run build` copies them into lib/
 
 tests/
   client.test.ts    SDK-level tests. Mock fetch via ReclaimClient constructor's `fetch` option.
+  email/            Email proof tests; fixtures sign proofs with a throwaway key
 ```
 
 ## Writing code
@@ -85,6 +90,13 @@ Inherit repo-wide conventions from the root `AGENTS.md`. Specific to this packag
    must not import `node:assert` or the Boom runtime.
 7. Run focused tests, lint, typecheck, a browser bundle check, and the package
    build after changing the public API boundary.
+8. `src/email/core` and `src/email/lib` are a copy of the email verification
+   core. Keep their behavior identical to the core's. The email signature path
+   (`src/email/verify.ts`) may use only regular dependencies; everything that
+   needs an optional peer dependency loads only in `full` mode. The copy keeps
+   the core's few `any` and `as unknown as` casts on purpose, each with a
+   comment; new code outside the copy follows rule 5. Tests for the copy live
+   in `tests/email/core/`, ported from the core's suite.
 
 ## Adding a new endpoint
 

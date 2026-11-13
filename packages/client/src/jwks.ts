@@ -32,6 +32,8 @@ export interface ReclaimJwks {
 	'x-reclaim-attestors'?: string[]
 	/** Trusted sha256 digests for attestor Confidential Space images. */
 	'x-reclaim-attestor-image-digests'?: string[]
+	/** Trusted Reclaim Portal email-proof signer addresses. */
+	'x-reclaim-email-issuers'?: string[]
 }
 
 /**
@@ -111,6 +113,9 @@ export async function fetchReclaimJwks(
 		'x-reclaim-attestor-image-digests': validateAttestorImageDigests(
 			body['x-reclaim-attestor-image-digests'] ?? [],
 		),
+		'x-reclaim-email-issuers': validateEmailIssuerAddresses(
+			body['x-reclaim-email-issuers'] ?? [],
+		),
 	}
 }
 
@@ -167,10 +172,19 @@ export function trustedAttestorAddresses(keys: Jwk[]): string[] {
 
 /** Validate and normalize the JWKS address-only trust extension. */
 export function validateAttestorAddresses(addresses: string[]): string[] {
+	return normalizeAddresses(addresses, 'attestor address')
+}
+
+/** Validate and normalize the JWKS email-issuer trust extension. */
+export function validateEmailIssuerAddresses(addresses: string[]): string[] {
+	return normalizeAddresses(addresses, 'email issuer address')
+}
+
+function normalizeAddresses(addresses: string[], label: string) {
 	return [...new Set(addresses.map((address) => {
 		const normalized = address.trim().toLowerCase()
 		if(!/^0x[0-9a-f]{40}$/.test(normalized)) {
-			throw new Error('invalid attestor address in JWKS trust registry')
+			throw new Error(`invalid ${label} in JWKS trust registry`)
 		}
 
 		return normalized

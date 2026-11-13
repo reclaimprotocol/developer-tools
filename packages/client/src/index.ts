@@ -69,6 +69,7 @@ export {
 	selectVerificationResultKey,
 	trustedAttestorAddresses,
 	validateAttestorAddresses,
+	validateEmailIssuerAddresses,
 	validateAttestorImageDigests,
 } from './jwks.ts'
 export {
