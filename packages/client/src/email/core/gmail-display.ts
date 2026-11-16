@@ -1,7 +1,7 @@
 /* eslint-disable @stylistic/max-len */
 /** Gmail's parsed payload is for fast display only, never verification evidence. */
 import { decodeWords } from 'postal-mime'
-import { gmailRequest, GoogleEmailError } from './google.ts'
+import { GMAIL_API_BASE, gmailRequest, GoogleEmailError } from './google.ts'
 
 export interface GmailDisplay {
 	from: string
@@ -44,6 +44,7 @@ async function message(
 	token: string,
 	id: string,
 	signal?: AbortSignal,
+	base = GMAIL_API_BASE,
 ): Promise<Part> {
 	if(!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) {
 		throw new GoogleEmailError('GOOGLE_REJECTED')
@@ -53,7 +54,7 @@ async function message(
 		id?: string
 		payload?: Part
 		sizeEstimate?: number
-	}>(token, `/messages/${id}?format=full`, signal, 4 * 1024 * 1024)
+	}>(token, `/messages/${id}?format=full`, signal, 4 * 1024 * 1024, base)
 	if(data.id !== id || !data.payload || typeof data.payload !== 'object') {
 		throw new GoogleEmailError('GOOGLE_REJECTED')
 	}
@@ -143,12 +144,13 @@ export async function gmailDisplayAttachment(
 	id: string,
 	fileId: string,
 	signal?: AbortSignal,
+	base = GMAIL_API_BASE,
 ): Promise<{ metadata: GmailDisplayFile, bytes: Buffer }> {
 	if(!/^(?:[0-9]|1[0-9])$/.test(fileId)) {
 		throw new GoogleEmailError('GOOGLE_REJECTED')
 	}
 
-	const file = files(await message(token, id, signal))[Number(fileId)]
+	const file = files(await message(token, id, signal, base))[Number(fileId)]
 	if(!file) {
 		throw new GoogleEmailError('GOOGLE_REJECTED')
 	}
@@ -168,6 +170,7 @@ export async function gmailDisplayAttachment(
 			`/messages/${id}/attachments/${reference}`,
 			signal,
 			8 * 1024 * 1024 + 1024,
+			base,
 		)
 		: file.part.body
 	if(
@@ -196,8 +199,9 @@ export async function gmailDisplay(
 	token: string,
 	id: string,
 	signal?: AbortSignal,
+	base = GMAIL_API_BASE,
 ): Promise<GmailDisplay> {
-	const payload = await message(token, id, signal)
+	const payload = await message(token, id, signal, base)
 	let count = 0,
 		body = '',
 		html: string | undefined,

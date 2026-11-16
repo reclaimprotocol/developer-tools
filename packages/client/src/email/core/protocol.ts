@@ -8,12 +8,20 @@ import {
 	copyNormalizedPolicy,
 	plainCopy,
 } from './policy-data.ts'
-import { type EmailProvider, emailProviderSchema } from './providers.ts'
+import {
+	type EmailProvider,
+	emailProviderSchema,
+	type EmailTransport,
+	emailTransportSchema,
+} from './providers.ts'
 import { normalizedEmailPolicySchema } from './schemas.ts'
 export {
 	EMAIL_PROVIDERS,
 	type EmailProvider,
 	emailProviderSchema,
+	EMAIL_TRANSPORTS,
+	type EmailTransport,
+	emailTransportSchema,
 } from './providers.ts'
 export { plainCopy, normalizeEmailPolicy } from './policy-data.ts'
 export {
@@ -113,6 +121,7 @@ export const emailRequestSchema = z.strictObject({
 	version: z.literal(1),
 	appId: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
 	provider: emailProviderSchema,
+	transport: emailTransportSchema.optional(),
 	sessionId: emailId,
 	nonce: emailId,
 	createdAt: z.number().int().positive(),
@@ -131,6 +140,12 @@ export interface EmailRequest {
 	appId: string
 	/** Mailbox provider the user reads the email from. */
 	provider: EmailProvider
+	/**
+	 * How the Portal reads that provider's mailbox (`api` | `bridge`). Omitted
+	 * means the Portal's configured default. Only the word travels here; the
+	 * Portal resolves it to a base URL from its own config.
+	 */
+	transport?: EmailTransport
 	sessionId: string
 	nonce: string
 	createdAt: number

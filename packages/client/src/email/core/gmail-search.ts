@@ -1,7 +1,7 @@
 /* eslint-disable @stylistic/max-len */
 /** Server-only browsing helpers. Gmail metadata is never authenticated evidence. */
 import { decodeWords } from 'postal-mime'
-import { gmailRequest, GoogleEmailError } from './google.ts'
+import { GMAIL_API_BASE, gmailRequest, GoogleEmailError } from './google.ts'
 
 export interface GmailSummary {
 	id: string
@@ -35,6 +35,7 @@ export async function gmailSummaryMetadata(
 	token: string,
 	id: string,
 	signal?: AbortSignal,
+	base = GMAIL_API_BASE,
 ): Promise<{
 	summary: GmailSummary
 	received: number
@@ -49,7 +50,13 @@ export async function gmailSummaryMetadata(
 		params.append('metadataHeaders', name)
 	}
 
-	const data = await gmailRequest(token, `/messages/${id}?${params}`, signal)
+	const data = await gmailRequest(
+		token,
+		`/messages/${id}?${params}`,
+		signal,
+		undefined,
+		base,
+	)
 	if(
 		data.labelIds !== undefined &&
 		(!Array.isArray(data.labelIds) ||
@@ -137,6 +144,7 @@ export async function searchGmailOwned(
 	query: string,
 	previous?: GmailSearchPosition,
 	signal?: AbortSignal,
+	base = GMAIL_API_BASE,
 ): Promise<GmailSearchPage> {
 	query = validateGmailQuery(query)
 	const position = previous ? structuredClone(previous) : initialGmailSearch()
@@ -191,7 +199,13 @@ export async function searchGmailOwned(
 					params.set('pageToken', position.pageToken)
 				}
 
-				const list = await gmailRequest(token, `/messages?${params}`, bounded)
+				const list = await gmailRequest(
+					token,
+					`/messages?${params}`,
+					bounded,
+					undefined,
+					base,
+				)
 				if(
 					list.messages !== undefined &&
 					(!Array.isArray(list.messages) || list.messages.length > 50)
@@ -236,6 +250,7 @@ export async function searchGmailOwned(
 						token,
 						id,
 						bounded,
+						base,
 					)
 					// Enforce message-level direction even if user query operators override
 					// the Gmail query. Received replies in a thread containing sent mail stay visible.

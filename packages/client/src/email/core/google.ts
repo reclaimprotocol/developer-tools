@@ -290,7 +290,12 @@ export async function googleRevokeToken(
 	}
 }
 
-const API = 'https://gmail.googleapis.com/gmail/v1/users/me'
+// Gmail REST base for the official API (`transport: 'api'`). Hardcoded because
+// it never changes for Google. For `transport: 'bridge'` the Portal resolves
+// its own bridge base (from its config, keyed off the request's transport enum)
+// and passes it to `gmailRequest` as `base` — nothing is read from the
+// environment, and no base URL is ever taken from the app's request.
+export const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me'
 function retryAfter(headers: Headers): number {
 	const value = headers.get('retry-after')?.trim()
 	if(!value) {
@@ -309,7 +314,12 @@ export async function gmailRequest<T = any>(
 	path: string,
 	signal?: AbortSignal,
 	limit = 512 * 1024,
+	// The REST base to hit. Defaults to Google; the Portal passes its resolved
+	// bridge base here when the request's transport is `bridge`. Trailing slashes
+	// are trimmed so the leading-slash `path` never produces a `//`.
+	base = GMAIL_API_BASE,
 ): Promise<T> {
+	base = base.trim().replace(/\/+$/, '') || GMAIL_API_BASE
 	const controller = AbortSignal.any([
 		AbortSignal.timeout(10000),
 		...(signal ? [signal] : []),
@@ -340,7 +350,7 @@ export async function gmailRequest<T = any>(
 				})
 			}
 
-			const res = await fetch(`${API}${path}`, {
+			const res = await fetch(`${base}${path}`, {
 				headers: { Authorization: `Bearer ${token}` },
 				signal: controller,
 				redirect: 'error',
@@ -455,8 +465,9 @@ export async function gmailRequest<T = any>(
 export async function gmailProfile(
 	token: string,
 	signal?: AbortSignal,
+	base = GMAIL_API_BASE,
 ): Promise<{ emailAddress: string }> {
-	const p = await gmailRequest(token, '/profile', signal)
+	const p = await gmailRequest(token, '/profile', signal, undefined, base)
 	return { emailAddress: normalizeEmailMailbox(p.emailAddress) }
 }
 
@@ -477,6 +488,7 @@ export async function gmailRaw(
 	token: string,
 	id: string,
 	signal?: AbortSignal,
+	base = GMAIL_API_BASE,
 ): Promise<Buffer> {
 	if(!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) {
 		throw new GoogleEmailError('GOOGLE_REJECTED')
@@ -487,6 +499,7 @@ export async function gmailRaw(
 		`/messages/${id}?format=raw`,
 		signal,
 		12 * 1024 * 1024,
+		base,
 	)
 	if(
 		typeof data.raw !== 'string' ||
