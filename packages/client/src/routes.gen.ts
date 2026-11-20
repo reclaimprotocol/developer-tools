@@ -1,4 +1,4 @@
-// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:bd379584571e).
+// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:c396e8430ac4).
 // Do not edit by hand: Reclaim regenerates this file upstream.
 
 export const ROUTES = {
@@ -121,6 +121,7 @@ export const ROUTES = {
 	"ListThemes": {"method":"get","path":"/orgs/{orgId}/themes"},
 	"ListVerificationDeliveries": {"method":"get","path":"/verifications/sessions/{sessionId}/deliveries"},
 	"ListVerificationEvents": {"method":"get","path":"/verifications/sessions/{sessionId}/events"},
+	"LlmsTxt": {"method":"get","path":"/llms.txt"},
 	"LoginPage": {"method":"get","path":"/login"},
 	"Logout": {"method":"post","path":"/logout"},
 	"MakePrivate": {"method":"post","path":"/providers/{providerId}/make-private"},
