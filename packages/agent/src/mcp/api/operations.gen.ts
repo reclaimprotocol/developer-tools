@@ -1,4 +1,4 @@
-// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:003acf6254ed).
+// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:22017b62f110).
 // Do not edit by hand: Reclaim regenerates this file upstream.
 // @ts-nocheck
 
@@ -559,6 +559,16 @@ export const MCP_TOOLS = {
 									"isOptional": {
 										"type": "boolean",
 										"description": "Defaults to `false`. If `true`, the claim can be proven without this value, and the proofs can omit it. If `false` or absent, the data point is required, and a session whose proofs omit it ends as `rejected` with `reasonCode` `missing-data-points`."
+									},
+									"source": {
+										"type": "string",
+										"enum": [
+											"email.sender",
+											"email.recipient",
+											"email.date",
+											"email.signingDomain"
+										],
+										"description": "Email verification only. Marks this data point as a verified email fact that Builder fills from the cryptographically verified proof — `email.sender` (the From address), `email.recipient` (the connected recipient), `email.date` (the signed Date), or `email.signingDomain` (the DKIM signing domain) — instead of asking the AI to extract it from the email body. Omit for a content data point the AI extracts; when omitted, Builder may infer it from the prompt and description."
 									}
 								}
 							}
