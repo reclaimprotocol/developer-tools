@@ -6,6 +6,15 @@ import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
 const execute = promisify(execFile)
+
+/** The document sandbox could not start — a host/runtime problem, not a bad
+ *  proof. Carries a matching `.code` so callers (verify.ts) classify it as
+ *  "full verification unavailable" rather than "proof invalid". */
+function documentIsolationUnavailable() {
+	const code = 'DOCUMENT_ISOLATION_UNAVAILABLE'
+	return Object.assign(new Error(code), { code })
+}
+
 /** Internal launcher, also used by hostile-worker tests. Never exported by the package. */
 export async function runDocumentWorker(
 	worker: string,
@@ -19,12 +28,12 @@ export async function runDocumentWorker(
 	}
 
 	if(process.platform !== 'linux') {
-		throw new Error('DOCUMENT_ISOLATION_UNAVAILABLE')
+		throw documentIsolationUnavailable()
 	}
 
 	const runtime = process.env.EMAIL_DOCUMENT_BWRAP ?? '/usr/bin/bwrap'
 	if(!isAbsolute(runtime)) {
-		throw new Error('DOCUMENT_ISOLATION_UNAVAILABLE')
+		throw documentIsolationUnavailable()
 	}
 
 	let args: string[]
@@ -157,7 +166,7 @@ export async function runDocumentWorker(
 			throw new Error('EMAIL_APPROVAL_CANCELLED')
 		}
 
-		throw new Error('DOCUMENT_ISOLATION_UNAVAILABLE')
+		throw documentIsolationUnavailable()
 	}
 
 	signal.throwIfAborted()
@@ -215,7 +224,7 @@ export async function runDocumentWorker(
 		// Diagnostics can contain document data or paths. Do not forward them.
 		child.stderr.resume()
 		child.stdin.on('error', () => {})
-		child.once('error', () => finish(new Error('DOCUMENT_ISOLATION_UNAVAILABLE')),
+		child.once('error', () => finish(documentIsolationUnavailable()),
 		)
 		child.once('close', (code) => {
 			if(settled) {
@@ -223,7 +232,7 @@ export async function runDocumentWorker(
 			}
 
 			if(code !== 0) {
-				return finish(new Error('DOCUMENT_ISOLATION_UNAVAILABLE'))
+				return finish(documentIsolationUnavailable())
 			}
 
 			try {
