@@ -1,6 +1,6 @@
 {
   "name": "reclaim",
-  "version": "0.1.47",
+  "version": "0.2.0",
   "description": "Integrate source-account verification into products with the Reclaim Protocol Builder MCP.",
   "contextFileName": "GEMINI.md",
   "mcpServers": {

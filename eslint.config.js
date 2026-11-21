@@ -10,8 +10,9 @@ export default defineConfig([
 	},
 	{
 		ignores: [
-			'**/lib/**',
-			'**/lib',
+			// build output; `packages/client/src/email/lib` is source
+			'packages/*/lib/**',
+			'packages/*/lib',
 			// plain JavaScript and Node test files are outside the TypeScript project
 			'**/*.js',
 			'**/*.mjs',

@@ -75,6 +75,27 @@ checks the required data points and the context pin. AI results omit
 `reclaim.results.receive` from `@reclaimprotocol/client` 0.1.44 or later.
 Older clients reject AI results.
 
+When the user shares an email instead, the result entry has
+`method: 'email'`, an `email-v1` proof signed by Reclaim Portal, and
+`email: { provider, sender, dkimSigner, request }`. Client 0.2.0 or later
+verifies it. It trusts the Portal signers in the `x-reclaim-email-issuers`
+list of Builder's JWKS, plus any you pass in `emailIssuers`. The verified
+proof outcome has `method: 'email'`, `emailProvider`, `sender`, `dkimSigner`,
+`authenticatedAddress`, `extractedParameters`, and `emailCheck`. Pick the
+check with `emailVerification`:
+
+- `'signature'` (default): checks the Portal signature, the request binding,
+  and the email digests. Runs anywhere.
+- `'full'`: also re-runs DKIM and re-checks the evidence. Needs Linux,
+  Bubblewrap 0.12 or later, and the client's optional email peer
+  dependencies. It fails with `email-full-verification-unavailable` instead of
+  falling back.
+
+Email proofs expire an hour after Portal issues them. The client checks that
+at the result's signed `iat`, so a stored or redelivered result still
+verifies. If you pin `hashes` or `proofRecipes`, email entries fail with
+`email-not-allowed` unless you also pass `allowEmailProofs: true`.
+
 ## Fall back to a provider
 
 Switch to the provider route (`start_integration` with route `provider`:

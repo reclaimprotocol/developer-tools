@@ -1,7 +1,7 @@
 {
 	"name": "@reclaimprotocol/client",
 	"title": "Reclaim Client",
-	"version": "0.1.47",
+	"version": "0.2.0",
 	"description": "Typed SDK/HTTP client SDK for the Reclaim Protocol — the programmatic way to use Reclaim Protocol to verify **data points** about your users (a follower count, an account balance, an order). Can be directly integrated by apps to request verification for their users using Reclaim Protocol and verify the results.",
 	"type": "module",
 	"sideEffects": false,
@@ -27,6 +27,51 @@
 		"./launch": {
 			"types": "./lib/launch/index.d.ts",
 			"import": "./lib/launch/index.js"
+		},
+		"./email": {
+			"types": "./lib/email/index.d.ts",
+			"import": "./lib/email/index.js",
+			"default": "./lib/email/index.js"
+		},
+		"./email/core": {
+			"types": "./lib/email/core/index.d.ts",
+			"import": "./lib/email/core/index.js",
+			"default": "./lib/email/core/index.js"
+		},
+		"./email/protocol": {
+			"types": "./lib/email/core/protocol.d.ts",
+			"import": "./lib/email/core/protocol.js",
+			"default": "./lib/email/core/protocol.js"
+		},
+		"./email/contracts": {
+			"types": "./lib/email/core/contracts.d.ts",
+			"import": "./lib/email/core/contracts.js",
+			"default": "./lib/email/core/contracts.js"
+		},
+		"./email/schemas": {
+			"types": "./lib/email/core/schemas.d.ts",
+			"import": "./lib/email/core/schemas.js",
+			"default": "./lib/email/core/schemas.js"
+		},
+		"./email/sender": {
+			"types": "./lib/email/core/sender.d.ts",
+			"import": "./lib/email/core/sender.js",
+			"default": "./lib/email/core/sender.js"
+		},
+		"./email/google": {
+			"types": "./lib/email/core/google.d.ts",
+			"import": "./lib/email/core/google.js",
+			"default": "./lib/email/core/google.js"
+		},
+		"./email/preview": {
+			"types": "./lib/email/core/preview.d.ts",
+			"import": "./lib/email/core/preview.js",
+			"default": "./lib/email/core/preview.js"
+		},
+		"./email/ai": {
+			"types": "./lib/email/core/ai.d.ts",
+			"import": "./lib/email/core/ai.js",
+			"default": "./lib/email/core/ai.js"
 		}
 	},
 	"files": [
@@ -49,10 +94,10 @@
 	},
 	"websiteUrl": "https://docs.reclaimprotocol.org",
 	"scripts": {
-		"build": "tsc",
+		"build": "tsc && node scripts/copy-email-workers.ts",
 		"prepublishOnly": "npm run build",
 		"dev": "tsc --watch",
-		"test": "node --test-timeout=120000 --test tests/*.test.ts",
+		"test": "node --test-timeout=120000 --test tests/*.test.ts tests/email/*.test.ts tests/email/core/*.test.ts",
 		"check": "tsc -p tsconfig.test.json"
 	},
 	"keywords": [
@@ -72,16 +117,115 @@
 		"@noble/secp256k1": "^3.1.0",
 		"@reclaimprotocol/attestor-core": "^5.1.6",
 		"canonicalize": "^2.1.0",
-		"eciesjs": "^0.4.15"
+		"eciesjs": "^0.4.15",
+		"jsonc-parser": "^3.3.1",
+		"re2js": "^2.9.0",
+		"zod": "^4.6.7"
+	},
+	"peerDependencies": {
+		"chardet": "2.2.0",
+		"fflate": "0.8.3",
+		"file-type": "22.2.0",
+		"google-auth-library": "11.3.1",
+		"html-to-text": "10.0.1",
+		"iconv-lite": "0.7.3",
+		"mailauth": "7.1.0",
+		"mammoth": "1.13.0",
+		"pdfjs-dist": "6.4.299",
+		"postal-mime": "4.0.4",
+		"read-excel-file": "9.3.12",
+		"sax": "1.4.3"
+	},
+	"peerDependenciesMeta": {
+		"chardet": {
+			"optional": true
+		},
+		"fflate": {
+			"optional": true
+		},
+		"file-type": {
+			"optional": true
+		},
+		"google-auth-library": {
+			"optional": true
+		},
+		"html-to-text": {
+			"optional": true
+		},
+		"iconv-lite": {
+			"optional": true
+		},
+		"mailauth": {
+			"optional": true
+		},
+		"mammoth": {
+			"optional": true
+		},
+		"pdfjs-dist": {
+			"optional": true
+		},
+		"postal-mime": {
+			"optional": true
+		},
+		"read-excel-file": {
+			"optional": true
+		},
+		"sax": {
+			"optional": true
+		}
 	},
 	"devDependencies": {
+		"@types/html-to-text": "^9.0.4",
 		"@types/node": "^24.0.0",
+		"chardet": "2.2.0",
+		"fflate": "0.8.3",
+		"file-type": "22.2.0",
+		"google-auth-library": "11.3.1",
+		"html-to-text": "10.0.1",
+		"iconv-lite": "0.7.3",
+		"mailauth": "7.1.0",
+		"mammoth": "1.13.0",
 		"openapi-typescript": "^7.13.0",
+		"pdfjs-dist": "6.4.299",
+		"postal-mime": "4.0.4",
+		"read-excel-file": "9.3.12",
+		"sax": "1.4.3",
 		"typescript": "^5.9.0",
 		"yaml": "^2.6.0"
 	},
 	"publishConfig": {
 		"access": "public",
 		"provenance": true
+	},
+	"typesVersions": {
+		"*": {
+			"email": [
+				"lib/email/index.d.ts"
+			],
+			"email/core": [
+				"lib/email/core/index.d.ts"
+			],
+			"email/protocol": [
+				"lib/email/core/protocol.d.ts"
+			],
+			"email/contracts": [
+				"lib/email/core/contracts.d.ts"
+			],
+			"email/schemas": [
+				"lib/email/core/schemas.d.ts"
+			],
+			"email/sender": [
+				"lib/email/core/sender.d.ts"
+			],
+			"email/google": [
+				"lib/email/core/google.d.ts"
+			],
+			"email/preview": [
+				"lib/email/core/preview.d.ts"
+			],
+			"email/ai": [
+				"lib/email/core/ai.d.ts"
+			]
+		}
 	}
 }

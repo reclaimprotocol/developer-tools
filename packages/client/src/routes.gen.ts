@@ -1,4 +1,4 @@
-// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:c396e8430ac4).
+// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:22017b62f110).
 // Do not edit by hand: Reclaim regenerates this file upstream.
 
 export const ROUTES = {
@@ -164,6 +164,7 @@ export const ROUTES = {
 	"Sitemap": {"method":"get","path":"/sitemap.xml"},
 	"SitePage": {"method":"get","path":"/site/{domain}"},
 	"SitePanel": {"method":"get","path":"/site/{domain}/panel"},
+	"StartAiEmailVerification": {"method":"post","path":"/verifications/ai-sessions/{sessionId}/email/start"},
 	"StartAiVerificationSession": {"method":"post","path":"/verifications/ai-sessions/{sessionId}/start"},
 	"StartSocialLogin": {"method":"get","path":"/login/social/{provider}"},
 	"StripeWebhook": {"method":"post","path":"/billing/stripe/webhook"},

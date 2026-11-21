@@ -12,6 +12,9 @@
  */
 import { sha256 } from '@noble/hashes/sha2.js'
 import { decrypt as eciesDecrypt, encrypt as eciesEncrypt } from 'eciesjs'
+import type { EmailProofV1 } from './email/core/contracts.ts'
+import type { EmailProvider, EmailRequest } from './email/core/protocol.ts'
+import type { EmailVerificationMode } from './email/verify.ts'
 import type { components } from './types/openapi.gen.ts'
 import type { DecryptionKey } from './enckeys.ts'
 import {
@@ -292,6 +295,26 @@ export interface VerifyResultFullOptions {
 	 * older stored results whose signatures and proofs must remain verifiable.
 	 */
 	ignoreExpiration?: boolean
+	/**
+	 * How to verify email proofs in an AI-session result. `signature`
+	 * (default) checks the Portal signature, the signed request binding, and
+	 * the email digests. `full` also re-runs DKIM and re-checks the evidence;
+	 * it needs Linux, Bubblewrap 0.12 or later, and the client's optional
+	 * email peer dependencies, and it fails rather than falling back.
+	 */
+	emailVerification?: EmailVerificationMode
+	/**
+	 * Trusted Reclaim Portal email signer addresses, added to the
+	 * `x-reclaim-email-issuers` list in Builder's JWKS.
+	 */
+	emailIssuers?: string[]
+	/**
+	 * Accept email proofs even though `hashes`, `proofRecipes`, or
+	 * `proofValidation.hashes`/`providerId` pin which proofs are acceptable.
+	 * Those pins only describe Reclaim proofs, so by default an email entry
+	 * fails with `email-not-allowed` when any of them is set.
+	 */
+	allowEmailProofs?: boolean
 }
 
 export interface ResultProofOutcome {
@@ -326,6 +349,21 @@ export interface ResultProofOutcome {
 	data?: TrustedData
 	/** Provider-supplied data. It isn't cryptographically validated. */
 	publicData?: unknown
+	/** `email` for an email proof from an AI session. */
+	method?: 'email'
+	/** Exact email proof carried by the Builder-signed result. */
+	emailProof?: EmailProofV1
+	emailProvider?: EmailProvider
+	/** Sender rule from the email request that the email matched. */
+	sender?: string
+	/** Domain of the DKIM signature that authenticated the email. */
+	dkimSigner?: string
+	/** Mailbox the user signed in with. */
+	authenticatedAddress?: string
+	/** Values extracted from the email. Trusted only when `proofValid`. */
+	extractedParameters?: Record<string, string>
+	/** Which email verification ran. */
+	emailCheck?: EmailVerificationMode
 }
 
 export interface VerifyResultFullOutcome extends VerifyResultOutcome {
@@ -402,6 +440,7 @@ export async function verifyResultFull(
 	const reclaimSessionId = payload.reclaimSessionId as string | undefined
 	let jwksAttestorAddresses: string[] = []
 	let jwksAttestorImageDigests: string[] = []
+	let jwksEmailIssuers: string[] = []
 	/** Throw with the full invalid outcome — verification never *returns* an
 	 *  invalid result. */
 	const fail = (
@@ -467,6 +506,7 @@ export async function verifyResultFull(
 			jwksAttestorAddresses = registry['x-reclaim-attestors'] ?? []
 			jwksAttestorImageDigests =
 				registry['x-reclaim-attestor-image-digests'] ?? []
+			jwksEmailIssuers = registry['x-reclaim-email-issuers'] ?? []
 		} catch(error) {
 			return fail('jwks-fetch-failed', {
 				retryable: isTransientError(error),
@@ -534,6 +574,13 @@ export async function verifyResultFull(
 		proof: ReclaimRequestProof
 		outcomeIndex: number
 	}[] = []
+	const emailEntries: {
+		proof: unknown
+		email: EmailEntryNames
+		request: EmailRequest
+		outcomeIndex: number
+	}[] = []
+	const emailPinned = !opts.allowEmailProofs && pinsProofContent(opts)
 	for(const prov of providerResults) {
 		const providerId =
 			typeof prov.provider_id === 'string' ? prov.provider_id : undefined
@@ -546,6 +593,36 @@ export async function verifyResultFull(
 		for(const r of requests) {
 			const requestId =
 				typeof r.request_id === 'string' ? r.request_id : undefined
+			if(isEmailEntry(r)) {
+				const email = emailEntryOf(r.email)
+				const outcome: ResultProofOutcome = {
+					providerId,
+					resolvedVersion: providerVersion,
+					requestId,
+					method: 'email',
+					proofValid: false,
+				}
+				proofs.push(outcome)
+				if(emailPinned) {
+					// The caller pinned which proofs are acceptable, and an email
+					// proof can't match a Reclaim proof pin.
+					outcome.reason = 'email-not-allowed'
+				} else if(!email) {
+					// Builder always sends the email request. Without it nothing
+					// binds the proof to this app and session, so fail closed.
+					outcome.reason = 'email-proof-invalid'
+				} else {
+					emailEntries.push({
+						proof: r.proof,
+						email,
+						request: email.request,
+						outcomeIndex: proofs.length - 1,
+					})
+				}
+
+				continue
+			}
+
 			if(!isReclaimRequestProof(r.proof)) {
 				proofs.push({
 					providerId,
@@ -576,7 +653,11 @@ export async function verifyResultFull(
 	}
 
 	const verificationStatus = getVerificationStatus(payload)
-	if(verificationStatus === 'success' && !proofGroups.length) {
+	if(
+		verificationStatus === 'success'
+		&& !proofGroups.length
+		&& !proofs.some((p) => p.method === 'email')
+	) {
 		return fail('proof-missing', { proofs })
 	}
 
@@ -658,6 +739,10 @@ export async function verifyResultFull(
 		} else {
 			await verifyByResolvedRecipes(commonValidation, expectedSessionId)
 		}
+	}
+
+	if(emailEntries.length) {
+		await verifyEmailEntries()
 	}
 
 	if(!proofs.every((p) => p.proofValid)) {
@@ -788,6 +873,60 @@ export async function verifyResultFull(
 		await verifyRequestProofGroup(group, validation)
 	}
 
+	async function verifyEmailEntries() {
+		// Loaded only for email results, so other results never load the
+		// email verifier.
+		const { normalizeEmailIssuers, verifyEmailProof } = await import(
+			'./email/index.ts'
+		)
+		const { snapshotEmailProof } = await import('./email/core/protocol.ts')
+		// Throws on a malformed `emailIssuers` entry: a configuration error,
+		// not a bad result.
+		const trustedIssuers = normalizeEmailIssuers([
+			...opts.emailIssuers ?? [],
+			...jwksEmailIssuers,
+		])
+		// Email proofs expire an hour after Portal issues them, but a Builder
+		// result stays verifiable. Builder verified each proof before it signed
+		// `iat`, so check expiry at that time unless the caller sets `now`.
+		const emailNow = opts.now
+			?? (typeof payload.iat === 'number' ? payload.iat : undefined)
+		for(const { proof, email, request, outcomeIndex } of emailEntries) {
+			const outcome = proofs[outcomeIndex]
+			try {
+				const verified = await verifyEmailProof(proof, {
+					trustedIssuers,
+					mode: opts.emailVerification ?? 'signature',
+					request,
+					now: emailNow,
+				})
+				if(
+					email.provider !== verified.emailProvider
+					|| email.sender !== verified.sender
+					|| email.dkimSigner !== verified.dkimSigner
+				) {
+					outcome.reason = 'email-proof-invalid'
+					continue
+				}
+
+				outcome.proofValid = true
+				outcome.emailProof = snapshotEmailProof(proof)
+				outcome.emailProvider = verified.emailProvider
+				outcome.sender = verified.sender
+				outcome.dkimSigner = verified.dkimSigner
+				outcome.authenticatedAddress = verified.authenticatedAddress
+				outcome.extractedParameters = verified.extractedParameters
+				outcome.emailCheck = verified.emailCheck
+			} catch(error) {
+				outcome.reason = emailFailureReason(error)
+				// The host can't run `full` mode yet; once it can, a redelivery
+				// of the same result can succeed.
+				outcome.transient =
+					outcome.reason === 'email-full-verification-unavailable'
+			}
+		}
+	}
+
 	function markInvalid(group: typeof proofGroups, reason: string) {
 		for(const { outcomeIndex } of group) {
 			proofs[outcomeIndex].proofValid = false
@@ -880,6 +1019,70 @@ function recipeGroupsMatch(
 	)))
 	return expected.size === groups.size
 		&& [...groups.keys()].every((key) => expected.has(key))
+}
+
+/** An AI-session entry carrying a Reclaim Portal email proof. */
+function isEmailEntry(entry: Record<string, unknown>) {
+	return entry.method === 'email'
+		|| (
+			!!entry.proof
+			&& typeof entry.proof === 'object'
+			&& 'proofType' in entry.proof
+			&& entry.proof.proofType === 'email-v1'
+		)
+}
+
+interface EmailEntryNames {
+	provider: unknown
+	sender: unknown
+	dkimSigner: unknown
+	request: EmailRequest
+}
+
+/** The entry's `email` object, when it carries the email request. */
+function emailEntryOf(email: unknown): EmailEntryNames | undefined {
+	if(
+		!email
+		|| typeof email !== 'object'
+		|| !('request' in email)
+		|| !email.request
+		|| typeof email.request !== 'object'
+	) {
+		return undefined
+	}
+
+	return {
+		provider: 'provider' in email ? email.provider : undefined,
+		sender: 'sender' in email ? email.sender : undefined,
+		dkimSigner: 'dkimSigner' in email ? email.dkimSigner : undefined,
+		// `verifyEmailProof` validates the request's shape before using it.
+		request: email.request as EmailRequest,
+	}
+}
+
+/** Whether the caller pinned which Reclaim proofs are acceptable. */
+function pinsProofContent(opts: VerifyResultFullOptions) {
+	return Boolean(
+		opts.hashes?.length
+		|| opts.proofRecipes?.length
+		|| opts.proofValidation?.hashes?.length
+		|| opts.proofValidation?.providerId,
+	)
+}
+
+const EMAIL_FAILURE_REASONS = new Set([
+	'email-issuer-not-trusted',
+	'email-proof-invalid',
+	'email-full-verification-unavailable',
+])
+
+function emailFailureReason(error: unknown) {
+	const reason = error && typeof error === 'object' && 'reason' in error
+		? error.reason
+		: undefined
+	return typeof reason === 'string' && EMAIL_FAILURE_REASONS.has(reason)
+		? reason
+		: 'email-proof-invalid'
 }
 
 function isReclaimRequestProof(value: unknown): value is ReclaimRequestProof {
