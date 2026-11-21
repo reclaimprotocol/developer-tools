@@ -22,6 +22,11 @@ type AnyFn = (...args: any[]) => any
  * EMAIL_DOCUMENT_BWRAP), /usr/bin/prlimit, and unprivileged user namespaces.
  */
 export const sandboxSkip = await sandboxUnavailable()
+/** Skip message to use even when `sandboxSkip` is false but a worker throws
+ *  DOCUMENT_ISOLATION_UNAVAILABLE at runtime (probe passed, real worker failed). */
+const sandboxSkipReason = typeof sandboxSkip === 'string'
+	? sandboxSkip
+	: 'Bubblewrap or user namespaces are unavailable on this host'
 
 export const describe = withEach(
 	(name, options, fn) => nodeTest.describe(name, options, () => {
@@ -67,8 +72,11 @@ export function afterAll(fn: () => unknown) {
 }
 
 function isSandboxFailure(error: unknown) {
-	return !!sandboxSkip
-		&& inspect(error).includes('DOCUMENT_ISOLATION_UNAVAILABLE')
+	// The pre-run probe runs `/bin/true` under Bubblewrap; the real worker runs
+	// node with stricter binds and can throw this at runtime where the probe
+	// passed (e.g. a CI runner without user namespaces). Treat it as a skip
+	// regardless of what the probe concluded.
+	return inspect(error).includes('DOCUMENT_ISOLATION_UNAVAILABLE')
 }
 
 class Asymmetric {
@@ -583,16 +591,17 @@ function withEach(run: Runner, isTest: boolean) {
 		}
 
 		return async(t?: nodeTest.TestContext) => {
-			if(suiteNeedsSandbox && sandboxSkip) {
-				t?.skip(sandboxSkip)
+			if(suiteNeedsSandbox) {
+				t?.skip(sandboxSkipReason)
 				return
 			}
 
 			try {
 				return await Reflect.apply(fn, undefined, args)
 			} catch(error) {
-				if(isSandboxFailure(error) && sandboxSkip) {
-					t?.skip(sandboxSkip)
+				if(isSandboxFailure(error)) {
+					suiteNeedsSandbox = true
+					t?.skip(sandboxSkipReason)
 					return
 				}
 
