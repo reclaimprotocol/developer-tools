@@ -319,7 +319,15 @@ export async function gmailRequest<T = any>(
 	// are trimmed so the leading-slash `path` never produces a `//`.
 	base = GMAIL_API_BASE,
 ): Promise<T> {
-	base = base.trim().replace(/\/+$/, '') || GMAIL_API_BASE
+	// Trim trailing slashes with a linear backward scan; the regex `/\/+$/`
+	// backtracks on long untrusted `/`-runs (ReDoS).
+	base = base.trim()
+	let end = base.length
+	while(end > 0 && base[end - 1] === '/') {
+		end--
+	}
+
+	base = base.slice(0, end) || GMAIL_API_BASE
 	const controller = AbortSignal.any([
 		AbortSignal.timeout(10000),
 		...(signal ? [signal] : []),

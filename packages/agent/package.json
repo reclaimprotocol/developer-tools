@@ -91,7 +91,7 @@
 		"@noble/hashes": "^2.2.0",
 		"@puppeteer/browsers": "3.2.4",
 		"@reclaimprotocol/attestor-core": "^5.1.6",
-		"@reclaimprotocol/client": "^0.1.49",
+		"@reclaimprotocol/client": "0.2.0",
 		"@reclaimprotocol/tls": "^0.1.3",
 		"chrome-remote-interface": "^0.33.0",
 		"domhandler": "^6.0.0",
