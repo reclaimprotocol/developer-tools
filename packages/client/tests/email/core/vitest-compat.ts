@@ -23,7 +23,7 @@ type AnyFn = (...args: any[]) => any
  */
 export const sandboxSkip = await sandboxUnavailable()
 /** Skip message to use even when `sandboxSkip` is false but a worker throws
- *  DOCUMENT_ISOLATION_UNAVAILABLE at runtime (probe passed, real worker failed). */
+ *  DOCUMENT_ISOLATION_UNAVAILABLE at runtime (probe passed, worker failed). */
 const sandboxSkipReason = typeof sandboxSkip === 'string'
 	? sandboxSkip
 	: 'Bubblewrap or user namespaces are unavailable on this host'
