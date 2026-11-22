@@ -64,10 +64,9 @@ export function detectConcerns(req: CapturedRequest): RequestConcern[] {
 		if(reqHeadersLower[h]) {
 			concerns.push({
 				code: 'csrfDependency',
-				message: `Request includes a "${h}" header — ` +
-					'a prior request fetched this token. ' +
-					'Replay will fail unless the token is still valid; ' +
-					'expect to re-capture for proof.',
+				message: `Request includes a "${h}" header. ` +
+					'It is sent as a per-user secret from the live request; ' +
+					'replay and verification use the user\'s own value.',
 			})
 			break
 		}

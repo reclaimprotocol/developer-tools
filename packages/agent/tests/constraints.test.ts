@@ -67,7 +67,9 @@ describe('detectConcerns', () => {
 
 	it('flags csrf dependency via X-CSRF-Token request header', () => {
 		const c = detectConcerns(req({ requestHeaders: { 'X-CSRF-Token': 'abc' } }))
-		assert.ok(c.find((x) => x.code === 'csrfDependency'))
+		const concern = c.find((x) => x.code === 'csrfDependency')
+		assert.ok(concern)
+		assert.match(concern.message, /per-user secret/)
 	})
 
 	it('flags encrypted/binary response bodies', () => {

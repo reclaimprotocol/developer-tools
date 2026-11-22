@@ -11,6 +11,17 @@ import { extractGraphqlOp } from '../provider/graphql.ts'
 import type { CapturedRequest } from '../provider/schema.ts'
 import { BodyStore } from './eviction.ts'
 
+/** Marker the MCP appends to its own in-page replay scripts as a
+ *  `//# sourceURL`. CDP carries it in the request's initiator stack, so the
+ *  capture engine can tell the MCP's replays from the page's own requests. */
+export const REPLAY_SOURCE_URL = 'reclaim-mcp-replay'
+
+/** The slice of a CDP stack trace the engine reads. */
+export interface StackLike {
+	callFrames: { url: string }[]
+	parent?: StackLike
+}
+
 /** The slice of CDP `Network.requestWillBeSent` the engine reads. Kept
  *  structural — not devtools-protocol's full event type — so a transport
  *  pinned to a different devtools-protocol version still satisfies it. */
@@ -22,6 +33,7 @@ export interface RequestWillBeSentLike {
 		headers: Record<string, string>
 		postData?: string
 	}
+	initiator?: { stack?: StackLike }
 }
 
 /** The slice of CDP `Network.responseReceived` the engine reads. */
@@ -33,6 +45,18 @@ export interface ResponseReceivedLike {
 		encodedDataLength: number
 		headers: Record<string, string>
 	}
+}
+
+/** Whether any frame in `stack` or its parent chain comes from an MCP replay
+ *  script (see {@link REPLAY_SOURCE_URL}). */
+function isReplayInitiated(stack: StackLike | undefined): boolean {
+	for(let s = stack; s; s = s.parent) {
+		if(s.callFrames.some((f) => f.url === REPLAY_SOURCE_URL)) {
+			return true
+		}
+	}
+
+	return false
 }
 
 /** Drop HTTP/2 pseudo-headers (`:authority`, `:method`, `:path`, `:scheme`,
@@ -245,6 +269,13 @@ export function createCaptureEngine(opts: CaptureEngineOptions): CaptureEngine {
 		// fetch their bodies or grow the store). Drop any extra-info that raced
 		// ahead of this event so it can't linger.
 		if(isStaticAsset(p.request.url)) {
+			pendingRequestExtra.delete(p.requestId)
+			return
+		}
+
+		// The MCP's own replay requests aren't page traffic. Keep them out of
+		// the capture so they can't show up as candidates.
+		if(isReplayInitiated(p.initiator?.stack)) {
 			pendingRequestExtra.delete(p.requestId)
 			return
 		}

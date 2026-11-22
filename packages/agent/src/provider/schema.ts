@@ -18,9 +18,10 @@ export type ResponseMatch = HttpParams['responseMatches'][number]
 /**
  * A response match as drafted for PUBLISH: the attestor's match plus
  * `isOptional` — a backend-side matcher flag (both the old devtools backend
- * and the builder store it; the attestor's own params have no such field, so
- * `propose_provider` drafts never set it — only an explicit publish input
- * does). Default false on both backends.
+ * and the builder store it). The attestor's own params have no such field, so
+ * local replays and proofs skip an optional match the response doesn't
+ * satisfy (`withoutAbsentOptionals`). Set by `propose_provider`'s per-target
+ * `optional`, `update_draft`, or the publish input. Default false.
  */
 export type DraftResponseMatch = ResponseMatch & { isOptional?: boolean }
 

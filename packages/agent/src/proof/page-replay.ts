@@ -10,6 +10,7 @@
  * `pageSession` argument). The ANONYMOUS auth-bound check does NOT go through
  * the page — see `replayProviderInPage`'s doc comment below for why.
  */
+import { REPLAY_SOURCE_URL } from '../cdp/capture-engine.ts'
 import type { ReclaimProvider } from '../provider/schema.ts'
 import {
 	buildReplayRequest,
@@ -42,6 +43,9 @@ async function pageFetch(
 	extraSecrets: Record<string, string>,
 ): Promise<PageFetchResult> {
 	const req = buildReplayRequest(provider, extraSecrets)
+	// The script carries REPLAY_SOURCE_URL as its `sourceURL`, so the capture
+	// engine can tell this request from the page's own traffic (`fetch` is the
+	// first, synchronous call, so it's in the initiator stack).
 	const expression = `(async () => {
 		try {
 			const r = await fetch(${JSON.stringify(req.url)}, {
@@ -53,7 +57,8 @@ async function pageFetch(
 			})
 			return { status: r.status, body: await r.text() }
 		} catch(e) { return { error: String((e && e.message) || e) } }
-	})()`
+	})()
+//# sourceURL=${REPLAY_SOURCE_URL}`
 	try {
 		const res = (await backend.sendCdp('Runtime.evaluate', {
 			expression,

@@ -145,4 +145,67 @@ describe('wait_for_ai_session', () => {
 		assert.equal(out.timedOut, true)
 		assert.equal(out.next, 'waiting_for_user')
 	})
+
+	it('reports the outcome, problem, and a webhook hint', async() => {
+		const out = await run([
+			{
+				lookup: { status: 'started', aiSdkSessionId: 'portal-1' },
+				session: {
+					status: 'error',
+					callbackDeliveryStatus: 'pending',
+					callbackDeliveryStatuses: [
+						{ subscriptionId: 's1', deliveryStatus: 'attempt_failed' },
+					],
+					outcome: 'data_not_found',
+					outcomeNote: {
+						label: 'The value was not found.',
+						retry: 'change_request',
+						suggestions: [],
+					},
+				},
+				events: [
+					{
+						event: 'verification_error',
+						eventData: {
+							problem: { title: 'Failed', detail: 'No match', reasonCode: 'x' },
+						},
+					},
+					{ event: 'session_expired' },
+				],
+			},
+		]) as unknown as {
+			lookup: { aiSdkSessionId: string }
+			session: {
+				outcome: string
+				problem: { detail: string }
+				callbackHint: string
+			}
+			fallback: { reason: string }
+		}
+		assert.equal(out.lookup.aiSdkSessionId, 'portal-1')
+		assert.equal(out.session.outcome, 'data_not_found')
+		assert.equal(out.session.problem.detail, 'No match')
+		assert.match(out.session.callbackHint, /list_verification_deliveries/)
+		assert.match(out.session.callbackHint, /test_callback_subscription/)
+		assert.match(out.session.callbackHint, /delete_callback_subscription/)
+		assert.match(out.fallback.reason, /The value was not found\./)
+	})
+
+	it('treats a default cancel detail as an unknown reason', async() => {
+		const out = await run([
+			{
+				lookup: { status: 'started' },
+				session: { status: 'cancelled' },
+				events: [
+					{
+						event: 'verification_cancelled',
+						eventData: {
+							problem: { detail: 'The verification was cancelled.' },
+						},
+					},
+				],
+			},
+		]) as unknown as { session: { problem: { reasonUnknown: boolean } } }
+		assert.equal(out.session.problem.reasonUnknown, true)
+	})
 })

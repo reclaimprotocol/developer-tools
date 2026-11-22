@@ -3,6 +3,7 @@ import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { after, before, describe, it } from 'node:test'
 import vm from 'node:vm'
+import { REPLAY_SOURCE_URL } from '../src/cdp/capture-engine.ts'
 import type { PageReplayTarget } from '../src/proof/page-replay.ts'
 import { replayProviderInPage } from '../src/proof/page-replay.ts'
 
@@ -15,6 +16,13 @@ before(async() => {
 	srv = createServer((req, res) => {
 		lastAuth = req.headers.authorization
 		lastCookie = req.headers.cookie
+		if(req.url === '/csrf') {
+			// Only the original capture carries the CSRF header.
+			res.statusCode = req.headers['x-csrf-token'] === 'tok' ? 200 : 403
+			res.end(res.statusCode === 200 ? 'ok' : 'bad csrf token')
+			return
+		}
+
 		if(req.url === '/user' && req.headers.authorization === 'token xyz') {
 			res.setHeader('content-type', 'application/json')
 			res.end(JSON.stringify({ followers: 1247 }))
@@ -133,5 +141,28 @@ describe('replayProviderInPage', () => {
 			),
 			/CORS blocked/,
 		)
+	})
+})
+
+describe('replay tagging', () => {
+	it('tags the replay script and hints at CSRF on a 403', async() => {
+		const expressions: string[] = []
+		const target: PageReplayTarget = {
+			sendCdp: async(method, params) => {
+				expressions.push(params?.expression as string)
+				return fakeTabTarget().sendCdp(method, params)
+			},
+		}
+		const recipe = await replayProviderInPage(target, {
+			name: 't',
+			url: `http://127.0.0.1:${port}/csrf`,
+			method: 'GET',
+			headers: { Accept: 'application/json' },
+			responseMatches: [{ type: 'contains', value: 'ok' }],
+		}, {})
+		assert.equal(recipe.status, 403)
+		assert.match(recipe.hints?.join(' ') ?? '', /CSRF/)
+		assert.equal(expressions.length, 1)
+		assert.ok(expressions[0]?.endsWith(`//# sourceURL=${REPLAY_SOURCE_URL}`))
 	})
 })

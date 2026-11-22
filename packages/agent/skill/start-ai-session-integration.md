@@ -23,6 +23,7 @@ An AI session needs no provider. The user prompt and data points tell Builder wh
 ## 3. Make sure results have a destination
 
 - [ ] Call `list_callback_subscriptions`. If the organization has none, call `create_callback_subscription` for the session-ending events: `verification_success`, `verification_rejected`, `verification_error`, `verification_cancelled`, and `session_expired`.
+- [ ] Check webhook health: in the `list_callback_subscriptions` result, a webhook with `consecutiveFailures` of 5 or more no longer counts as active, and creating a session returns 409. Show the developer its `lastError`, and suggest `proxy_callback_events` or a new URL. After the fix, call `test_callback_subscription`. Offer `delete_callback_subscription` for it once.
 - [ ] For local development, start the app's backend and call `proxy_callback_events({ port, path })` with the callback route's port and path. It forwards the org's verification events to that route on localhost, with no public URL. The proxy works only while this coding agent's MCP server runs.
 - [ ] For production, ask the developer for the public callback URL, and call `create_org_callback_subscription` with it. If they have no deployed URL yet, tell them: "When you deploy, ask me to run `create_org_callback_subscription` with your public callback URL, or results will not reach the app."
 
@@ -33,12 +34,13 @@ An AI session needs no provider. The user prompt and data points tell Builder wh
 ## 5. Try a session
 
 - [ ] Call `create_ai_verification_session` with:
-  - `prompt`: a sentence for "{{goal}}", written as the claim to prove.
+  - `prompt`: a sentence for "{{goal}}", written as the claim to prove. Describe the value and the menu path a person follows to see it. Don't repeat the data point descriptions, and don't use GraphQL names or JSON paths.
   - `dataPoints`: the values the claim needs. Mark one identifier required. Mark the others optional. Add no profile or identity extras.
-  - `loginUrls`: the site's sign-in URLs, when you know them.
+  - `loginUrls`: the site's sign-in page or account home, when you know it. Don't guess a deep link.
+- [ ] If the developer named a request, a JSON path, or an internal ID, or the value appears only in an API response, skip this step and go to step 7: AI sessions prove only values a page shows.
 - [ ] Call `wait_for_ai_session` with the returned session ID, until the lookup is ready.
-- [ ] Share the returned `verificationUrl` with the developer, in the same message as the ask: "Open this link, sign in to the site, and tell me when you are done." End your turn.
-- [ ] After they reply, call `wait_for_ai_session` until the session reaches a terminal status. Use `read_callback_events({ sessionId })` to see the delivered result.
+- [ ] Write the returned `verificationUrl` in a message to the developer: "Open this link and sign in to the site." They see only text you write, not tool results. If your client shows that message while your tools still run, call `wait_for_ai_session({ sessionId, untilTerminal: true })` right after it. Otherwise, end your turn with the URL and call the wait when they reply. Don't ask them to tell you when they are done.
+- [ ] Use `read_callback_events({ sessionId })` to see the delivered result.
 - [ ] The hosted verification page streams the target site as an image, so text or DOM checks of that page come back empty. Check progress with `wait_for_ai_session`, `list_verification_events`, and `get_verification_session`, not by reading the page.
 
 ## 6. Write the backend integration
@@ -54,5 +56,5 @@ Write this while you wait on the developer. Don't let it delay a step that needs
 
 ## 7. Fall back to a provider when the session cannot work
 
-- [ ] If `wait_for_ai_session` recommends a fallback, adjust the `dataPoints` or `loginUrls` as its result suggests and create one more session.
-- [ ] If the retry also recommends a fallback, call `start_integration` with `route: "provider"` and the same `goal`, and follow the plan it returns. Keep the backend work from step 6: the provider plan reuses the callback route.
+- [ ] If `wait_for_ai_session` recommends a fallback, read `session.outcome`, `outcomeNote`, and `problem`, and follow `outcomeNote.retry`: change the request, or retry the same one, once. Don't create sessions that only reword the prompt.
+- [ ] If the same failure happens twice, call `start_integration` with `route: "provider"` and the same `goal`, and follow the plan it returns. Keep the backend work from step 6: the provider plan reuses the callback route.

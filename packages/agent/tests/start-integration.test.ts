@@ -61,11 +61,11 @@ describe('start_integration', () => {
 			assert.doesNotMatch(plan, /Only when the developer asks for session/)
 		})
 
-	it('leaves the browser open and follows create_example_app next',
+	it('closes the browser after verification, follows example app',
 		() => {
 			const plan = renderStartIntegration({ goal: 'g', route: 'provider' })
 			assert.doesNotMatch(plan, /dispose_browser. after asking/)
-			assert.match(plan, /Don't ask whether to close the browser/)
+			assert.match(plan, /call `dispose_browser`, unless the developer asked/)
 			assert.match(plan, /`next` array that `create_example_app` returned/)
 			assert.doesNotMatch(plan, /\b(3000|5173)\b/)
 			assert.match(plan, /log file/)

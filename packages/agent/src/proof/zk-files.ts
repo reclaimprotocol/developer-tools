@@ -325,7 +325,7 @@ export function zkFilesState() {
  * The zk-symmetric-crypto copy attestor-core loads (it may be nested under
  * attestor-core), else the hoisted one.
  */
-function resolveZkPackageDir() {
+export function resolveZkPackageDir() {
 	const require = createRequire(import.meta.url)
 	for(const from of [
 		() => createRequire(require.resolve('@reclaimprotocol/attestor-core')),

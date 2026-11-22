@@ -7,6 +7,8 @@
  * `start_capture`, since one capture bundles the tab, its requests, and its
  * drafts) and the rich, credential-aware `run_proof` schema.
  */
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import type { JSONSchema } from 'zod/v4/core'
 import {
 	type AuthoringBackend,
@@ -18,6 +20,8 @@ import { lookupIpCountry } from '../../../cdp/geo.ts'
 import { runAttestorProof } from '../../../proof/attestor.ts'
 import { checkAttestor } from '../../../proof/check-attestor.ts'
 import { replayProviderInPage } from '../../../proof/page-replay.ts'
+import { withoutAbsentOptionals } from '../../../proof/replay.ts'
+import { resolveZkPackageDir } from '../../../proof/zk-files.ts'
 import {
 	DYNAMIC_GEO,
 	normalizeGeoLocation,
@@ -29,19 +33,44 @@ import {
 	GENERATED_KEY_NOTE,
 	resolveOrCreateEthKey,
 } from '../authenticate/eth-key.ts'
-import type { CaptureEntry, CaptureStore } from './capture.ts'
+import {
+	capturedResponseBody,
+	type CaptureEntry,
+	type CaptureStore,
+} from './capture.ts'
 import { diagnoseNetworkFailure, shapeRichProofResult } from './proof.ts'
 
+/** Platform and architecture names the gnark libraries use in file names. */
+const GNARK_ARCH: Record<string, string> = { x64: 'x86_64', arm64: 'arm64' }
+
 /**
- * OPRF mode this LOCAL (non-TEE) attestor can actually run. Recipes carry
- * `oprf-mpc` — the canonical/publish mode a TEE expects — but the local dev
- * attestor can't do MPC. gnark `oprf` (Linux/Mac, needs ZK circuits) is the
- * strongest it supports; Windows falls back to server-side `oprf-raw` (no
- * circuits). Proving with the wrong mode fails, which is what pushed the agent
- * to hand-craft a plaintext workaround.
+ * OPRF mode this LOCAL (non-TEE) attestor can actually run. Recipes can carry
+ * `oprf-mpc`, which a TEE expects but the local dev attestor can't do. gnark
+ * `oprf` is the strongest mode it supports, but only where the
+ * `@reclaimprotocol/zk-symmetric-crypto` package ships a gnark library for
+ * this platform and architecture (`bin/gnark/<platform>-<arch>-libprove.so`
+ * and `-libverify.so`). Otherwise it falls back to server-side `oprf-raw`,
+ * which needs no circuits. Proving with the wrong mode fails, which is what
+ * pushed the agent to hand-craft a plaintext workaround.
  */
-const LOCAL_OPRF_MODE: OprfMode =
-	process.platform === 'win32' ? 'oprf-raw' : 'oprf'
+export function localOprfMode(
+	pkgDir: string | undefined = resolveZkPackageDir(),
+	platform: string = process.platform,
+	arch: string = process.arch,
+): OprfMode {
+	if(!pkgDir) {
+		return 'oprf-raw'
+	}
+
+	const gnarkArch = GNARK_ARCH[arch] ?? arch
+	const prefix = join(pkgDir, 'bin', 'gnark', `${platform}-${gnarkArch}`)
+	return existsSync(`${prefix}-libprove.so`)
+		&& existsSync(`${prefix}-libverify.so`)
+		? 'oprf'
+		: 'oprf-raw'
+}
+
+let cachedLocalOprfMode: OprfMode | undefined
 
 /**
  * Clone `provider` with every `oprf-mpc` redaction remapped to the mode this
@@ -57,9 +86,9 @@ function withLocalOprfMode(provider: ReclaimProvider): ReclaimProvider {
 
 	return {
 		...provider,
-		responseRedactions: reds.map((r) => {
-			return r.hash === 'oprf-mpc' ? { ...r, hash: LOCAL_OPRF_MODE } : r
-		}),
+		responseRedactions: reds.map((r) => (r.hash === 'oprf-mpc'
+			? { ...r, hash: cachedLocalOprfMode ??= localOprfMode() }
+			: r)),
 	}
 }
 
@@ -158,7 +187,7 @@ function localBackend(
 				status: result.status,
 				matchesOriginal: result.matchesOriginal,
 				bodySnippet: result.body.slice(0, 256),
-				...(result.hints !== undefined ? { hints: result.hints } : {}),
+				...(result.hints?.length ? { hints: result.hints } : {}),
 			}
 		},
 		prove: async(draft, opts) => {
@@ -171,10 +200,13 @@ function localBackend(
 			const egress = await resolveProofEgress(
 				draft.provider, opts?.geoLocation, lookupCountry,
 			)
-			// Prove with the locally-runnable OPRF mode and the resolved egress;
-			// the draft (→ published recipe) keeps oprf-mpc and its template.
+			// Prove with the locally-runnable OPRF mode and the resolved egress,
+			// skipping optional values this account lacks; the draft (→ published
+			// recipe) keeps oprf-mpc, its template and every match.
 			const { geoLocation: _template, ...provider } = withLocalOprfMode(
-				draft.provider,
+				withoutAbsentOptionals(
+					draft.provider, capturedResponseBody(entry, draft.requestId),
+				),
 			)
 			void _template
 			const result = await runProof(

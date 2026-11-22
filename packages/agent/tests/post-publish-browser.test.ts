@@ -30,6 +30,7 @@ describe('postPublishBrowserNotes', () => {
 		assert.match(text, /fresh sign-in and an already-signed-in landing/)
 		assert.match(text, /advisory/)
 		assert.match(text, /does not prove compatibility.*production interceptor/)
-		assert.match(text, /dispose_browser/)
+		assert.match(text, /call dispose_browser.*unless the developer asked/)
+		assert.doesNotMatch(text, /Ask the developer whether/)
 	})
 })

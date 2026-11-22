@@ -1,4 +1,4 @@
-// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:22017b62f110).
+// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:a8306265c636).
 // Do not edit by hand: Reclaim regenerates this file upstream.
 
 export const ROUTES = {
@@ -172,6 +172,7 @@ export const ROUTES = {
 	"SubmitProviderVersionForReview": {"method":"post","path":"/providers/{providerId}/versions/{version}/review"},
 	"SubmitPublicContributionFeedback": {"method":"post","path":"/contribute/{publicId}/feedback"},
 	"SubmitVerificationClientResult": {"method":"post","path":"/verifications/sessions/{sessionId}/results"},
+	"TestCallbackSubscription": {"method":"post","path":"/verifications/callback-subscriptions/{subscriptionId}/test"},
 	"TrackAnalyticsEvents": {"method":"post","path":"/analytics/events"},
 	"TransferProvider": {"method":"post","path":"/providers/{providerId}/transfer"},
 	"UpdateAnnouncementBar": {"method":"put","path":"/admin/announcement-bar"},

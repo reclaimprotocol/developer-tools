@@ -18,9 +18,10 @@ import assert from 'node:assert'
 import type { ConfigStore } from '../../../config/store.ts'
 import { popcornProve } from '../../../proof/pod-prover.ts'
 import { buildHttpParams } from '../../../proof/proof-core.ts'
+import { withoutAbsentOptionals } from '../../../proof/replay.ts'
 import { defineTool, type RegisteredTool } from '../../server.ts'
 import type { AttachState } from './attach.ts'
-import type { CaptureStore } from './capture.ts'
+import { capturedResponseBody, type CaptureStore } from './capture.ts'
 import { shapeRichProofResult } from './proof.ts'
 
 export function podProofTools(
@@ -74,7 +75,9 @@ export function podProofTools(
 
 			const result = await popcornProve({
 				apiUrl,
-				params: buildHttpParams(draft.provider),
+				params: buildHttpParams(withoutAbsentOptionals(
+					draft.provider, capturedResponseBody(entry, draft.requestId),
+				)),
 				secretParams: { headers: draft.secrets },
 			})
 

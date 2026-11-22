@@ -151,7 +151,8 @@ integration. Prefer Builder for new integrations.
 `replay_request` and `run_proof` — plus the secret-free `provider` and
 `secretRefs`. The recipe **and the captured secret values** live server-side
 under that `draftId`; the secrets never enter the transcript, so you carry the
-`draftId`, not the provider JSON, into replay/prove.
+`draftId`, not the provider JSON, into replay/prove. Read `_notes` and
+`hashRecommendations` in the result.
 
 **Extracting more than one value?** Add a value only when the claim needs it.
 Prefer a **single request whose response contains all of them** and draft them
@@ -170,6 +171,9 @@ propose_provider(captureId, requestId, name, targets: [
 
 The shorthand `propose_provider(captureId, requestId, target, name, hash?)`
 still works for one target. Per-target `hash` works inside `targets` too.
+
+**Optional data points.** Set `optional: true` on a target when a proof may
+omit it. `update_draft` accepts `isOptional` on a match to change it later.
 
 **Inspect what comes back:**
 
@@ -300,9 +304,11 @@ make (currently: a captured value baked literally into the URL, needing the
 **1. Replay.** `replay_request(captureId, draftId)`:
 
 - `matchesOriginal: true` → proceed.
-- `false` with `hints` mentioning auth/csrf → re-trigger the action yourself
-  (navigate or reload with the tools) and redraft. Don't ask the developer to
-  redo it.
+- `false` with a 4xx → re-trigger the action yourself (navigate or reload
+  with the tools) and redraft. Don't ask the developer to redo it.
+- A missing non-secret header, such as a public `User-Agent`, is a warning,
+  not a blocker. CSRF headers are sent as per-user secrets from the live
+  request, so they need no re-capture.
 - `false` with a stable diff (timestamps, and so on) → tighten the matcher
   and retry.
 
@@ -358,7 +364,7 @@ endpoint URL inside the provider.
 `create_provider(orgId, domain, slug, title, description)` (`orgId` from
 `list_orgs`; `domain` such as `github.com`, `slug` such as `github-username`,
 `title` such as "GitHub Username"). It starts PRIVATE with an empty seed
-version. Use an existing `providerId` only when your org owns the provider and
+version, so the first real version is a patch bump (0.1.1). Use an existing `providerId` only when your org owns the provider and
 you are revising it: the capture lands as a NEW VERSION on it. For another
 org's provider that almost fits, create your own provider and version.
 
@@ -369,6 +375,10 @@ org's provider that almost fits, create your own provider and version.
 `version` and `bump` for the default patch bump; set `bump` to `major`, `minor`,
 or `patch`, or pass the exact higher `version` requested by the user. Never edit
 or archive an existing version to apply provider changes.
+
+A published version stores no request headers. At verification, the client
+intercepts the user's real request and sends its own headers. Draft headers
+matter only for `replay_request` and `run_proof`.
 
 - **Multi-request provider** (landing call + details call, a
   CSRF-preflight/refresh-token chain, …): run capture→draft→replay→prove ONCE
@@ -415,11 +425,10 @@ in, navigate to `initialUrl`; if a user script is present, run
 `test_user_script` with that script and `initialUrl`. When the existing capture
 has enough data, replay and prove every required request. Do not clear
 cookies or force another sign-in. Treat an unavailable or inconclusive retest as
-advisory and do not block publication. Don't ask whether to close the
-browser. Mention once in the final summary that it stays open for provider
-changes and you can close it on request; call `dispose_browser` only when the
-developer says so. A `builder` session is quota-accounted, so close it as soon
-as they say the work is done.
+advisory and do not block publication. After the version is published and a
+verification succeeds, call `dispose_browser`, unless the developer asked to
+keep the browser open. A `builder` session is quota-accounted, so close it as
+soon as the work is done.
 
 <!-- topic: discover -->
 ## Discover and resolve existing providers

@@ -257,22 +257,47 @@ want to attest the value, but an identity-bound proof needs an authenticated
 request. Keep digging, or proceed anyway?"_ Then wait for their call.
 
 <!-- section: oprf -->
-**Decide whether to OPRF the value** (privacy from the attestor) before calling
-`propose_provider`:
+**Decide whether to hash the value.** Hashing is opt-in. Without `hash`, the
+value travels in `paramValues` + `{{name}}` and the app receives the value
+itself.
 
-- **No hash** (default) — value travels in `paramValues` + `{{name}}`; the
-  attestor sees the cleartext substring. Right for non-sensitive values (public
-  IPs, public usernames, public repo names).
-- **`oprf-raw`** — server-side OPRF. **The only variant that runs on Windows /
-  without external deps.** Weakest privacy of the three (the attestor still
-  participates) — say so honestly.
-- **`oprf`** — client-side ZK OPRF using gnark. Strongest. Needs a gnark install
-  (Linux/macOS in practice). Don't suggest it on Windows.
-- **`oprf-mpc`** — TEE-based MPC. Niche; only if the developer raises it.
+- **Hash only a private value that the app needs to match, not read** (for
+  example, to check that two sessions belong to the same email address). With
+  a hash, the app receives a hash, not the value.
+- **If the developer asked for the value itself**, pass no hash and say so in
+  one line, for example: "I'm not hashing the email, so your app receives the
+  address." Ask only when it's unclear whether the app needs the value.
+- `propose_provider` returns `hashRecommendations` for values that look
+  sensitive (email address, SSN, IBAN). Treat each as a suggestion. Confirm
+  with the developer before you add a hash with `update_draft`. You can also
+  change or remove a hash there.
+- Support for OPRF modes varies by verification client. Ask the developer
+  which clients they target, then pick a mode they all support:
 
-**Skip the question** when the value is clearly non-sensitive, and default to
-no hash. When it is or could be sensitive (email, real name, private id —
-anything the developer wouldn't post publicly), put the four options to them.
+  | Client | `oprf` | `oprf-raw` | `oprf-mpc` |
+  |---|---|---|---|
+  | Reclaim Portal | Yes (TEE) | Non-TEE only; turns the TEE off for the session | Yes (TEE, default) |
+  | Builder verification client | Unconfirmed | No (the TEE rejects it) | Yes |
+  | In-app SDK | Yes (on device) | Untested | Yes (TEE) |
+  | Browser extension | Rewritten to `oprf-raw` | Yes (only mode) | Rewritten to `oprf-raw` |
+  | zkFetch | Alias for `oprf-mpc` | Non-TEE only | Yes (TEE, default) |
+
+  Default to `oprf-mpc`. Never use `oprf-raw` with the Builder verification
+  client. Tell the developer that the browser extension rewrites every mode
+  to `oprf-raw`.
+
+Modes:
+
+- **`oprf-mpc`** — TEE-based MPC. The mode `hashRecommendations` suggests.
+- **`oprf`** — client-side ZK OPRF using gnark. Needs a gnark build for the
+  platform.
+- **`oprf-raw`** — server-side OPRF. Runs anywhere, with no external
+  dependencies. The attestor still participates, so it has the weakest privacy
+  of the three.
+
+Local `run_proof` swaps `oprf-mpc` for the mode the local machine can run:
+`oprf` where a gnark build exists, otherwise `oprf-raw`. This affects local
+proofs only, not the published provider.
 
 **Hard limits:**
 

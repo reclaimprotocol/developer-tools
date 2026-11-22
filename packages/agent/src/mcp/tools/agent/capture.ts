@@ -25,6 +25,15 @@ export interface CaptureEntry {
 	drafts: DraftStore
 }
 
+/** The captured response body of `requestId`, or `undefined` when the
+ *  capture has none. */
+export function capturedResponseBody(entry: CaptureEntry, requestId: string) {
+	const body = entry.session.bodies.get(requestId)
+	return body.available
+		? body.body
+		: entry.session.requests.get(requestId)?.responseBody
+}
+
 interface GetRequestArgs {
 	captureId: string
 	requestId: string

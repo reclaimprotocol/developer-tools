@@ -4,7 +4,7 @@
 // Provider synthesis from a captured request (the `propose_provider` core):
 // drafts the canonical responseMatches/redactions + paramValues + secret refs.
 export { draftProvider } from './draft.ts'
-export type { DraftResult } from './draft.ts'
+export type { DraftResult, HashRecommendation } from './draft.ts'
 export { detectConcerns } from './constraints.ts'
 export { extractGraphqlOp, looksLikeGraphqlEndpoint } from './graphql.ts'
 export type {

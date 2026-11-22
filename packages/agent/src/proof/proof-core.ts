@@ -51,7 +51,15 @@ export function buildHttpParams(
 		method: provider.method,
 		...(provider.headers !== undefined && { headers: provider.headers }),
 		...(provider.body !== undefined && { body: provider.body }),
-		responseMatches: provider.responseMatches,
+		// Drop `isOptional`: it's a publish-side flag the attestor's params
+		// don't have.
+		responseMatches: provider.responseMatches.map(
+			({ type, value, invert }) => ({
+				type,
+				value,
+				...(invert !== undefined && { invert }),
+			}),
+		),
 		responseRedactions: provider.responseRedactions ?? [],
 		...(provider.paramValues !== undefined && {
 			paramValues: provider.paramValues,

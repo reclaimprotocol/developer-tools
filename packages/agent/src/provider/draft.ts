@@ -4,6 +4,7 @@ import { isOprfHashable, OPRF_MAX_BYTES, synthesizeMatcher } from './matcher.ts'
 import { normalizeCandidates } from './normalize.ts'
 import {
 	type CapturedRequest,
+	type DraftResponseMatch,
 	DYNAMIC_GEO,
 	type OprfMode,
 	type ReclaimProvider,
@@ -12,42 +13,40 @@ import {
 	type SecretParamRef,
 } from './schema.ts'
 import {
+	isTransportHeader,
 	secretUrlCharBudget,
 	splitSecrets,
 	stripTransportHeaders,
 } from './secrets.ts'
 
-/** OPRF mode for the auto-hash floor — TEE-native (attestor rejects oprf-raw,
- *  isn't set up for gnark oprf). */
-const DEFAULT_SENSITIVE_HASH: OprfMode = 'oprf-mpc'
-
-// The deterministic ANTI-LEAK FLOOR: values whose SHAPE is unambiguously
-// sensitive PII, force-hashed no matter the field name or the model's judgment.
-// Deliberately only FIXED-FORMAT identifiers — OPRF is byte-exact, so a
-// self-mutable value (a display name re-cased) would be grindable and pointless
-// to hash; and a bare number is ambiguous (a private account id vs a PUBLIC
-// user id / follower count that's meant to be proven in the clear). Those
-// contextual calls are the model's, via an explicit per-target `hash`. This
-// floor is universal (not domain-specific) and high-precision.
+// Values whose SHAPE is unambiguously sensitive PII. Only FIXED-FORMAT
+// identifiers: OPRF is byte-exact, so a self-mutable value (a display name
+// re-cased) would be grindable and pointless to hash, and a bare number is
+// ambiguous (a private account ID versus a public user ID that's meant to be
+// proven in the clear). These only drive a recommendation; hashing is opt-in.
 const EMAIL_VALUE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
 const SSN_VALUE = /^\d{3}-\d{2}-\d{4}$/
 const IBAN_VALUE = /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/
 
-function isCanonicalPii(value: string): boolean {
-	return EMAIL_VALUE.test(value)
-		|| SSN_VALUE.test(value) || IBAN_VALUE.test(value)
-}
-
-/** OPRF mode to apply when the caller passed none: the anti-leak floor —
- *  force-hash a value whose SHAPE is unambiguous PII, but ONLY when it's
- *  OPRF-hashable AND within the 62-byte MPC-circuit cap (UTF-8). Undefined =
- *  leave plaintext (a longer value can't be OPRF'd; contextual PII + the proven
- *  identity are the model's/plaintext call). */
-export function defaultSensitiveHash(value: string): OprfMode | undefined {
-	const hashable = isCanonicalPii(value)
+/** A hash worth recommending for `value`, with the reason. Only when the value
+ *  looks like an email address, SSN, or IBAN, is OPRF-hashable, and fits the
+ *  62-byte MPC-circuit cap (UTF-8). Undefined means no recommendation. The
+ *  draft never applies it: hashing changes what the app receives, so the
+ *  developer decides. */
+export function recommendedHash(
+	value: string,
+): { hash: OprfMode, reason: string } | undefined {
+	const kind = EMAIL_VALUE.test(value)
+		? 'an email address'
+		: SSN_VALUE.test(value)
+			? 'an SSN'
+			: IBAN_VALUE.test(value) ? 'an IBAN' : undefined
+	const hashable = kind
 		&& isOprfHashable(value)
 		&& Buffer.byteLength(value, 'utf8') <= OPRF_MAX_BYTES
-	return hashable ? DEFAULT_SENSITIVE_HASH : undefined
+	return hashable
+		? { hash: 'oprf-mpc', reason: `value looks like ${kind}` }
+		: undefined
 }
 
 /** One value to extract from the request: the captured `value`, a `name` (its
@@ -56,6 +55,9 @@ export interface DraftTarget {
 	value: string
 	name: string
 	hash?: OprfMode
+	/** Mark the data point optional: verification doesn't fail when it's
+	 *  missing. */
+	optional?: boolean
 }
 
 /** The realized extraction for one target — its value paired with the
@@ -73,6 +75,18 @@ export interface DraftResult {
 	secretRefs: SecretParamRef[]
 	/** One entry per target, in `responseMatches` order. */
 	extractions: Extraction[]
+	/** Captured request headers that are in neither `provider.headers` nor
+	 *  `secretRefs`, other than transport and conditional headers. Normally
+	 *  empty. */
+	droppedHeaders: string[]
+	/** Targets that look sensitive and could be hashed. Never applied. */
+	hashRecommendations: HashRecommendation[]
+}
+
+export interface HashRecommendation {
+	target: string
+	hash: OprfMode
+	reason: string
 }
 
 /** A header VALUE that is a per-session/request token — a UUID or a long opaque
@@ -200,6 +214,11 @@ export function assertPortableMatches(
 	}
 }
 
+/** True when `value`, or a normalized form of it, appears in `url`. */
+function inUrl(url: string, value: string): boolean {
+	return [value, ...normalizeCandidates(value)].some((v) => url.includes(v))
+}
+
 /** Reject a draft that OPRF-hashes a target whose value ALSO appears in the
  *  request URL. The whole point of `hash` is that the attestor never sees
  *  the value in cleartext — but URL `paramValues` are always signed into the
@@ -220,9 +239,7 @@ export function assertNoOprfUrlConflict(
 			continue
 		}
 
-		const inUrl = [t.value, ...normalizeCandidates(t.value)]
-			.some((v) => url.includes(v))
-		if(inUrl) {
+		if(inUrl(url, t.value)) {
 			throw new Error(
 				`target "${t.name}" is OPRF-hashed (${hash}) but its value also `
 				+ `appears in the request URL ("${url}") — the attestor signs URL `
@@ -332,10 +349,11 @@ export function draftProvider(
 	// One request → N matches + N redactions. Synthesize each target against the
 	// SAME response body; a distinct param name per target keeps their capture
 	// groups + paramValues from colliding.
-	const matches: ResponseMatch[] = []
+	const matches: DraftResponseMatch[] = []
 	const redactions: ResponseRedaction[] = []
 	const extractions: Extraction[] = []
 	const effectiveHashes: (OprfMode | undefined)[] = []
+	const hashRecommendations: HashRecommendation[] = []
 	let paramValues: Record<string, string> | undefined
 	const seenParams = new Map<string, string>()
 	for(const t of targets) {
@@ -355,11 +373,9 @@ export function draftProvider(
 		}
 
 		seenParams.set(paramName, t.name)
-		// Precedence: explicit per-target hash → explicit request-wide hash →
-		// the anti-leak floor (force-OPRF values whose SHAPE is unambiguous PII).
-		// The model makes the contextual calls (which named fields are sensitive)
-		// via an explicit per-target hash; this floor only guarantees the obvious.
-		const effectiveHash = t.hash ?? hash ?? defaultSensitiveHash(t.value)
+		// Precedence: explicit per-target hash, then the request-wide hash.
+		// Never hashed by default: see `recommendedHash`.
+		const effectiveHash = t.hash ?? hash
 		effectiveHashes.push(effectiveHash)
 		const synthesis = synthesizeMatcher(
 			req.responseBody,
@@ -375,7 +391,16 @@ export function draftProvider(
 			)
 		}
 
-		matches.push(synthesis.match)
+		if(!effectiveHash && !inUrl(req.url, t.value)) {
+			const rec = recommendedHash(t.value)
+			if(rec) {
+				hashRecommendations.push({ target: paramName, ...rec })
+			}
+		}
+
+		matches.push(t.optional
+			? { ...synthesis.match, isOptional: true }
+			: synthesis.match)
 		if(synthesis.redaction) {
 			redactions.push(synthesis.redaction)
 		}
@@ -435,12 +460,25 @@ export function draftProvider(
 		provider.body = req.requestBody
 	}
 
-	return { provider, secretRefs, extractions }
+	const kept = new Set([
+		...Object.keys(headersForProvider),
+		...secretRefs.map((r) => r.name),
+	].map((n) => n.toLowerCase()))
+	const droppedHeaders = [
+		...new Set(Object.keys(req.requestHeaders)
+			.filter((n) => !isTransportHeader(n))
+			.filter((n) => !kept.has(n.toLowerCase()))
+			.map((n) => n.toLowerCase())),
+	]
+
+	return {
+		provider, secretRefs, extractions, droppedHeaders, hashRecommendations,
+	}
 }
 
 /** Fields `update_draft` may replace on a drafted provider. */
 export interface DraftEdit {
-	responseMatches?: ResponseMatch[]
+	responseMatches?: DraftResponseMatch[]
 	responseRedactions?: ResponseRedaction[]
 	paramValues?: Record<string, string>
 	/** ISO country the request goes out from, or `{{DYNAMIC_GEO}}` /
@@ -522,8 +560,8 @@ export function editDraftProvider(
 		)
 	}
 
-	// An edit can't lower privacy: a draft that redacts keeps redacting, and
-	// every group it hashed stays hashed with the same mode.
+	// An edit may add, change, or remove a hash, but a draft that redacts
+	// keeps redacting.
 	const original = provider.responseRedactions ?? []
 	assert(
 		!original.length || redactions.length,
@@ -532,18 +570,6 @@ export function editDraftProvider(
 			+ 'whole response',
 		),
 	)
-	for(const r of original.filter((o) => o.hash)) {
-		for(const name of groupNames(r.regex)) {
-			const kept = redactions.find((e) => groupNames(e.regex).includes(name))
-			assert(
-				kept?.hash === r.hash,
-				badRequest(
-					`capture group ${name} is ${r.hash}-hashed in the draft; keep a `
-					+ 'redaction for it with the same hash',
-				),
-			)
-		}
-	}
 
 	const groups = matcherGroups(matches, redactions)
 	// A group the draft never extracted has a value nothing below checks, and
@@ -584,6 +610,16 @@ export function editDraftProvider(
 	const url = provider.url
 		.replace(/\{\{([^{}]+)\}\}/g, (t, name: string) => paramValues[name] ?? t)
 	assertNoOprfUrlConflict(url, hashed, hashed.map((t) => t.hash))
+	for(const t of hashed) {
+		assert(
+			isOprfHashable(t.value)
+			&& Buffer.byteLength(t.value, 'utf8') <= OPRF_MAX_BYTES,
+			badRequest(
+				`capture group ${t.name} can't be OPRF-hashed: its captured value `
+				+ `must be OPRF-hashable and at most ${OPRF_MAX_BYTES} bytes`,
+			),
+		)
+	}
 
 	const { responseRedactions: _r, paramValues: _p, ...rest } = provider
 	void _r

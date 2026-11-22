@@ -28,6 +28,7 @@ import './patch-domhandler.ts'
 import { LOGGER } from '../logger.ts'
 import type { CapturedRequest, ReclaimProvider } from '../provider/schema.ts'
 import { buildHttpParams } from './proof-core.ts'
+import { withoutAbsentOptionals } from './replay.ts'
 
 /** Longest revealed slice returned; the full slice is still checked. */
 const MAX_SLICE_CHARS = 400
@@ -81,7 +82,9 @@ export function checkMatchersOffline(
 	captured: Pick<CapturedRequest, 'status' | 'contentType' | 'responseBody'>,
 ): MatcherCheckResult {
 	const http = providers.http
-	const params = buildHttpParams(provider)
+	const params = buildHttpParams(
+		withoutAbsentOptionals(provider, captured.responseBody),
+	)
 	const logger = silentLogger()
 	const body = Buffer.from(captured.responseBody ?? '', 'utf8')
 	const head = Buffer.from(
