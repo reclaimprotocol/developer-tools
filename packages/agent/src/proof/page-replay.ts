@@ -11,8 +11,7 @@
  * the page — see `replayProviderInPage`'s doc comment below for why.
  */
 import { REPLAY_SOURCE_URL } from '../cdp/capture-engine.ts'
-import type { CapturedRequest, ReclaimProvider } from '../provider/schema.ts'
-import { stripTransportHeaders } from '../provider/secrets.ts'
+import type { ReclaimProvider } from '../provider/schema.ts'
 import {
 	buildReplayRequest,
 	evaluateReplay,
@@ -44,29 +43,15 @@ async function pageFetch(
 	extraSecrets: Record<string, string>,
 ): Promise<PageFetchResult> {
 	const req = buildReplayRequest(provider, extraSecrets)
-	return evaluateFetch(backend, { ...req, credentials })
-}
-
-/** Run one `fetch(...)` inside the attached tab and return its status and
- *  body. The script carries {@link REPLAY_SOURCE_URL} as its `sourceURL`, so
- *  the capture engine can tell this request from the page's own traffic
- *  (`fetch` is the first, synchronous call, so it's in the initiator stack). */
-async function evaluateFetch(
-	backend: PageReplayTarget,
-	req: {
-		url: string
-		method: string
-		headers: Record<string, string>
-		body?: string | undefined
-		credentials: 'omit' | 'include'
-	},
-): Promise<PageFetchResult> {
+	// The script carries REPLAY_SOURCE_URL as its `sourceURL`, so the capture
+	// engine can tell this request from the page's own traffic (`fetch` is the
+	// first, synchronous call, so it's in the initiator stack).
 	const expression = `(async () => {
 		try {
 			const r = await fetch(${JSON.stringify(req.url)}, {
 				method: ${JSON.stringify(req.method)},
 				headers: ${JSON.stringify(req.headers)},
-				credentials: ${JSON.stringify(req.credentials)},${req.body !== undefined
+				credentials: ${JSON.stringify(credentials)},${req.body !== undefined
 					? `\n\t\t\t\tbody: ${JSON.stringify(req.body)},`
 					: ''}
 			})
@@ -148,87 +133,4 @@ export async function replayProviderInPage(
 	}
 
 	return evaluateReplay(result.status, result.body ?? '', provider)
-}
-
-/** Header names a page's `fetch` can't set (the browser adds or forbids
- *  them). */
-const FORBIDDEN_FETCH_HEADERS = new Set([
-	'cookie', 'host', 'origin', 'referer', 'content-length', 'connection',
-	'accept-charset', 'accept-encoding', 'dnt', 'te', 'expect', 'keep-alive',
-	'trailer', 'upgrade', 'via', 'date',
-])
-
-function isForbiddenFetchHeader(name: string) {
-	const n = name.toLowerCase()
-	return FORBIDDEN_FETCH_HEADERS.has(n)
-		|| n.startsWith('sec-')
-		|| n.startsWith('proxy-')
-}
-
-export interface ControlReplayResult {
-	status: number
-	ok: boolean
-	headerDiff: HeaderDiff
-}
-
-export interface HeaderDiff {
-	onlyInCapture: string[]
-	onlyInRecipe: string[]
-	valueDiffers: string[]
-}
-
-/** Compare two header maps by name, case-insensitively. Returns names only,
- *  never values. */
-export function headerDiff(
-	recipe: Record<string, string>,
-	captured: Record<string, string>,
-): HeaderDiff {
-	const lower = (h: Record<string, string>) => new Map(
-		Object.entries(h).map(([k, v]) => [k.toLowerCase(), v]),
-	)
-	const r = lower(recipe)
-	const c = lower(captured)
-	return {
-		onlyInCapture: [...c.keys()].filter((k) => !r.has(k)),
-		onlyInRecipe: [...r.keys()].filter((k) => !c.has(k)),
-		valueDiffers: [...c.keys()].filter(
-			(k) => r.has(k) && r.get(k) !== c.get(k),
-		),
-	}
-}
-
-/**
- * Re-issue the ORIGINAL captured request unchanged, from inside the tab, so a
- * 4xx on the recipe replay can be told apart from a site defense: a 2xx here
- * means the recipe is the bug. Sends the captured method, URL, body and
- * headers (minus transport and fetch-forbidden headers); cookies ride along
- * via `credentials: 'include'`.
- */
-export async function controlReplayInPage(
-	backend: PageReplayTarget,
-	captured: CapturedRequest,
-	recipeHeaders: Record<string, string>,
-): Promise<ControlReplayResult> {
-	const headers = Object.fromEntries(
-		Object.entries(stripTransportHeaders(captured.requestHeaders))
-			.filter(([k]) => !isForbiddenFetchHeader(k)),
-	)
-	const result = await evaluateFetch(backend, {
-		url: captured.url,
-		method: captured.method,
-		headers,
-		body: captured.requestBody,
-		credentials: 'include',
-	})
-	if(result.error !== undefined || result.status === undefined) {
-		throw new Error(
-			`in-browser control replay failed: ${result.error ?? 'no response'}`,
-		)
-	}
-
-	return {
-		status: result.status,
-		ok: result.status >= 200 && result.status < 300,
-		headerDiff: headerDiff(recipeHeaders, headers),
-	}
 }

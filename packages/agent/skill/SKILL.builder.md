@@ -304,12 +304,8 @@ make (currently: a captured value baked literally into the URL, needing the
 **1. Replay.** `replay_request(captureId, draftId)`:
 
 - `matchesOriginal: true` → proceed.
-- `false` with a 4xx → read `control`. It re-sends the original captured
-  request unchanged. If `control.ok` is `true`, the recipe is wrong, not the
-  site: fix it from `control.headerDiff` (`onlyInCapture`, `onlyInRecipe`,
-  `valueDiffers`). If `control` fails too, re-trigger the action yourself
-  (navigate or reload with the tools) and redraft. Don't ask the developer to
-  redo it.
+- `false` with a 4xx → re-trigger the action yourself (navigate or reload
+  with the tools) and redraft. Don't ask the developer to redo it.
 - A missing non-secret header, such as a public `User-Agent`, is a warning,
   not a blocker. CSRF headers are sent as per-user secrets from the live
   request, so they need no re-capture.

@@ -5,10 +5,7 @@ import { after, before, describe, it } from 'node:test'
 import vm from 'node:vm'
 import { REPLAY_SOURCE_URL } from '../src/cdp/capture-engine.ts'
 import type { PageReplayTarget } from '../src/proof/page-replay.ts'
-import {
-	controlReplayInPage,
-	replayProviderInPage,
-} from '../src/proof/page-replay.ts'
+import { replayProviderInPage } from '../src/proof/page-replay.ts'
 
 let srv: Server
 let port: number
@@ -147,8 +144,8 @@ describe('replayProviderInPage', () => {
 	})
 })
 
-describe('control replay', () => {
-	it('tags the script and diffs headers on a recipe-only 403', async() => {
+describe('replay tagging', () => {
+	it('tags the replay script and hints at CSRF on a 403', async() => {
 		const expressions: string[] = []
 		const target: PageReplayTarget = {
 			sendCdp: async(method, params) => {
@@ -156,44 +153,16 @@ describe('control replay', () => {
 				return fakeTabTarget().sendCdp(method, params)
 			},
 		}
-		const url = `http://127.0.0.1:${port}/csrf`
 		const recipe = await replayProviderInPage(target, {
 			name: 't',
-			url,
+			url: `http://127.0.0.1:${port}/csrf`,
 			method: 'GET',
 			headers: { Accept: 'application/json' },
 			responseMatches: [{ type: 'contains', value: 'ok' }],
 		}, {})
 		assert.equal(recipe.status, 403)
 		assert.match(recipe.hints?.join(' ') ?? '', /CSRF/)
-
-		const control = await controlReplayInPage(target, {
-			requestId: 'r',
-			method: 'GET',
-			url,
-			status: 200,
-			contentType: 'text/plain',
-			size: 2,
-			requestHeaders: {
-				accept: 'application/json',
-				'X-CSRF-Token': 'tok',
-				Host: 'example.com',
-				'sec-fetch-mode': 'cors',
-				':authority': 'example.com',
-			},
-			responseHeaders: {},
-			finishedAt: 0,
-		}, { Accept: 'application/json' })
-		assert.equal(control.status, 200)
-		assert.equal(control.ok, true)
-		assert.deepEqual(control.headerDiff, {
-			onlyInCapture: ['x-csrf-token'],
-			onlyInRecipe: [],
-			valueDiffers: [],
-		})
-		assert.ok(expressions.length === 2)
-		for(const e of expressions) {
-			assert.ok(e.endsWith(`//# sourceURL=${REPLAY_SOURCE_URL}`))
-		}
+		assert.equal(expressions.length, 1)
+		assert.ok(expressions[0]?.endsWith(`//# sourceURL=${REPLAY_SOURCE_URL}`))
 	})
 })

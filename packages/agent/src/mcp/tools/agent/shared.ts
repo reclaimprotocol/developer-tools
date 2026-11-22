@@ -19,11 +19,7 @@ import {
 import { lookupIpCountry } from '../../../cdp/geo.ts'
 import { runAttestorProof } from '../../../proof/attestor.ts'
 import { checkAttestor } from '../../../proof/check-attestor.ts'
-import {
-	controlReplayInPage,
-	replayProviderInPage,
-} from '../../../proof/page-replay.ts'
-import { buildReplayRequest } from '../../../proof/replay.ts'
+import { replayProviderInPage } from '../../../proof/page-replay.ts'
 import { resolveZkPackageDir } from '../../../proof/zk-files.ts'
 import {
 	DYNAMIC_GEO,
@@ -132,12 +128,6 @@ async function resolveProofEgress(
 		: { source: 'none' }
 }
 
-function withoutCookie(secrets: Record<string, string>) {
-	return Object.fromEntries(
-		Object.entries(secrets).filter(([k]) => k.toLowerCase() !== 'cookie'),
-	)
-}
-
 /** The local backend for one capture: drive its tab over CDP, read its
  *  captured requests, prove via the in-process attestor, replay by re-fetching
  *  FROM INSIDE the tab (real cookies/session — see proof/page-replay.ts). */
@@ -183,43 +173,6 @@ function localBackend(
 			const result = await replayProviderInPage(
 				{ sendCdp }, draft.provider, draft.secrets, opts,
 			)
-			const hints = [...(result.hints ?? [])]
-			let control: Awaited<ReturnType<typeof controlReplayInPage>> | undefined
-			// A 4xx may be the recipe or a site defense. Re-send the original
-			// capture to tell them apart.
-			const captured = entry.session.requests.get(draft.requestId)
-			if(!opts?.withoutSecrets && captured
-				&& result.status >= 400 && result.status < 500) {
-				try {
-					const sent = buildReplayRequest(
-						draft.provider, withoutCookie(draft.secrets),
-					)
-					control = await controlReplayInPage(
-						{ sendCdp }, captured, sent.headers,
-					)
-				} catch(err) {
-					hints.push(
-						'control replay of the original request failed: '
-						+ (err instanceof Error ? err.message : String(err)),
-					)
-				}
-			}
-
-			if(control?.ok) {
-				hints.push(
-					'the original captured request succeeded (control.ok) but the '
-					+ 'recipe failed: the recipe is the bug, not a site defense. '
-					+ 'Compare control.headerDiff and fix the recipe. A missing '
-					+ 'non-secret header is a warning, not a blocker.',
-				)
-			} else if(control) {
-				hints.push(
-					'the original captured request also failed (control.status '
-					+ `${control.status}), so this may be a site defense or an `
-					+ 'expired session.',
-				)
-			}
-
 			// Remember the authenticated replay so a failed proof can tell "the
 			// site blocks non-browser clients" from a broken recipe.
 			if(!opts?.withoutSecrets) {
@@ -234,8 +187,7 @@ function localBackend(
 				status: result.status,
 				matchesOriginal: result.matchesOriginal,
 				bodySnippet: result.body.slice(0, 256),
-				...(hints.length > 0 ? { hints } : {}),
-				...(control ? { control } : {}),
+				...(result.hints?.length ? { hints: result.hints } : {}),
 			}
 		},
 		prove: async(draft, opts) => {
