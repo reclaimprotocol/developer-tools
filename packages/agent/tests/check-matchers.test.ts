@@ -126,6 +126,29 @@ describe('check_matchers + update_draft', () => {
 		assert.deepEqual(check.extractedParameters, { uuid: 'u1' })
 	})
 
+	it('skips the selector-only redaction of an absent optional value', () => {
+		const check = checkMatchersOffline({
+			name: 't',
+			url: 'https://example.com/me',
+			method: 'GET',
+			responseMatches: [
+				{ type: 'contains', value: '"uuid":"{{uuid}}"' },
+				{ type: 'contains', value: '"email":"{{email}}"', isOptional: true },
+			],
+			responseRedactions: [
+				{ jsonPath: '$.uuid', regex: '"uuid":"(?<uuid>[^"]+)"' },
+				{ jsonPath: '$.email' },
+			],
+			paramValues: { uuid: 'u1', email: 'a@b.c' },
+		}, {
+			status: 200,
+			contentType: 'application/json',
+			responseBody: '{"uuid":"u1"}',
+		})
+		assert.equal(check.ok, true, check.reason)
+		assert.deepEqual(check.extractedParameters, { uuid: 'u1' })
+	})
+
 	it('update_draft saves an edit, keeps the id, and checks it', async() => {
 		const { call, draftId, captureId } = await proposeTierDraft()
 		const updated = await call('update_draft', {

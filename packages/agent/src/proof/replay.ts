@@ -1,4 +1,15 @@
-import type { ReclaimProvider, ResponseMatch } from '../provider/schema.ts'
+import {
+	extractHTMLElementsIndexes,
+	extractJSONValueIndexes,
+} from '@reclaimprotocol/attestor-core'
+// Side-effect: make external domhandler nodes DOM-like so attestor-core's
+// bundled `xpath` accepts them (see patch-domhandler.ts).
+import './patch-domhandler.ts'
+import type {
+	ReclaimProvider,
+	ResponseMatch,
+	ResponseRedaction,
+} from '../provider/schema.ts'
 
 export interface ReplayResult {
 	status: number
@@ -162,9 +173,9 @@ export async function replayProvider(
  *
  * A match names its values with `{{name}}` placeholders or `(?<name>…)`
  * groups, and a redaction with `(?<name>…)` groups. A redaction is dropped
- * when no kept match uses its names and it belongs to an absent match or its
- * regex finds nothing in `body`. A redaction with only a `jsonPath` or
- * `xPath` and no names is kept: checking it needs the attestor's engine.
+ * when no kept match uses its names and it belongs to an absent match or
+ * selects nothing in `body`. Selector-only redactions have no names, so
+ * they're judged by what they select.
  */
 export function withoutAbsentOptionals(
 	provider: ReclaimProvider,
@@ -190,8 +201,7 @@ export function withoutAbsentOptionals(
 			return true
 		}
 
-		return !groups.some((g) => absentNames.has(g))
-			&& (r.regex === undefined || regexFinds(r.regex, body))
+		return !groups.some((g) => absentNames.has(g)) && selects(r, body)
 	})
 	return {
 		...provider,
@@ -213,14 +223,45 @@ function groupNames(regex: string | undefined) {
 		.map((m) => m[1] ?? '')
 }
 
-/** Whether `regex` finds anything in `body`. An invalid regex counts as a
- *  find, so the attestor reports it rather than this silently dropping it. */
-function regexFinds(regex: string, body: string) {
+/** Whether `r` selects anything in `body`, in the attestor's order: `xPath`
+ *  elements, then `jsonPath` values inside them, then `regex`. Uses
+ *  attestor-core's own selector functions. A selector or regex that can't
+ *  run counts as a find, so the attestor reports it rather than this
+ *  silently dropping it. */
+function selects(r: ResponseRedaction, body: string) {
+	let found = [body]
 	try {
-		return new RegExp(regex).test(body)
+		if(r.xPath) {
+			const els = extractHTMLElementsIndexes(body, r.xPath, !!r.jsonPath)
+			found = slices(body, els)
+		}
+
+		const { jsonPath } = r
+		if(jsonPath) {
+			found = found
+				.flatMap((e) => slices(e, extractJSONValueIndexes(e, jsonPath)))
+		}
+	} catch(err) {
+		return !/^(Failed to find XPath|jsonPath not found)/
+			.test(err instanceof Error ? err.message : '')
+	}
+
+	const { regex } = r
+	if(!regex) {
+		return found.length > 0
+	}
+
+	try {
+		// The attestor's flags, minus `g`, which makes `test` stateful.
+		const re = new RegExp(regex, 'si')
+		return found.some((e) => re.test(e))
 	} catch{
 		return true
 	}
+}
+
+function slices(s: string, ranges: { start: number, end: number }[]) {
+	return ranges.map(({ start, end }) => s.slice(start, end))
 }
 
 function matchesBody(body: string, m: ResponseMatch): boolean {
