@@ -9,6 +9,7 @@ import { objectSchema, type ResolveBackend } from '../../../authoring/util.ts'
 import { draftProvider, type DraftTarget } from '../../../provider/draft.ts'
 import { OPRF_MAX_BYTES } from '../../../provider/matcher.ts'
 import type { OprfMode } from '../../../provider/schema.ts'
+import { stripTransportHeaders } from '../../../provider/secrets.ts'
 import { verificationWarnings } from '../../../provider/verification-checks.ts'
 import { defineTool, type RegisteredTool } from '../../../tools/registry.ts'
 
@@ -22,7 +23,11 @@ export function proposeTool(resolveBackend: ResolveBackend): RegisteredTool {
 				+ 'points the claim needs from that response; returns a `draftId` '
 				+ 'and a secret-free recipe. Set `shortenNames: false` to preserve an '
 				+ 'explicit parameter name, including a hidden `REQ_` or `URL_` '
-				+ 'prefix. For matching and naming guidance, call '
+				+ 'prefix. Hashing is opt-in: set `hash` only when the app must '
+				+ 'match a private value without reading it; sensitive-looking '
+				+ 'values come back as `hashRecommendations` instead. Set '
+				+ '`optional` on a target to let verification pass without it. '
+				+ 'For matching and naming guidance, call '
 				+ 'how_it_works({ topic: "draft" }) and topic `params`.',
 			inputSchema: objectSchema(
 				{
@@ -62,6 +67,12 @@ export function proposeTool(resolveBackend: ResolveBackend): RegisteredTool {
 									type: 'string',
 									enum: ['oprf-raw', 'oprf', 'oprf-mpc'],
 								},
+								optional: {
+									type: 'boolean',
+									description:
+										'Verification still passes when this data point is '
+										+ 'absent from the response.',
+								},
 							},
 							required: ['value', 'name'],
 						},
@@ -93,6 +104,7 @@ export function proposeTool(resolveBackend: ResolveBackend): RegisteredTool {
 						...(typeof o.hash === 'string'
 							? { hash: o.hash as OprfMode }
 							: {}),
+						...(o.optional === true ? { optional: true } : {}),
 					}
 				})
 				: typeof args.target === 'string'
@@ -129,14 +141,17 @@ export function proposeTool(resolveBackend: ResolveBackend): RegisteredTool {
 				throw new Error(`request body unavailable for ${requestId}`)
 			}
 
-			const { provider, secretRefs, extractions } = draftProvider(
+			const {
+				provider, secretRefs, extractions, droppedHeaders, hashRecommendations,
+			} = draftProvider(
 				captured, targets, providerName, defaultHash, { shortenNames },
 			)
 			// Materialize the real secret header values for later replay/prove;
 			// they stay in the server-side draft, never in this result.
 			const secrets: Record<string, string> = {}
+			const headers = stripTransportHeaders(captured.requestHeaders)
 			for(const ref of secretRefs) {
-				const real = captured.requestHeaders[ref.name]
+				const real = headers[ref.name]
 				if(real !== undefined) {
 					secrets[ref.name] = real
 				}
@@ -146,10 +161,30 @@ export function proposeTool(resolveBackend: ResolveBackend): RegisteredTool {
 				provider, secretRefs, secrets, requestId, extractions,
 			})
 			const warnings = verificationWarnings(provider)
+			const notes: string[] = []
+			if(droppedHeaders.length) {
+				notes.push(
+					'Captured headers left out of the draft: '
+					+ `${droppedHeaders.join(', ')}. `
+					+ 'They looked per-request, so they are not in the recipe. If '
+					+ 'replay fails without one, tell the developer.',
+				)
+			}
+
+			if(hashRecommendations.length) {
+				notes.push(
+					'With a hash the app receives a hash, not the value. Support for '
+					+ 'OPRF modes varies by verification client. Confirm with the '
+					+ 'developer before adding one with update_draft.',
+				)
+			}
+
 			return {
 				draftId,
 				provider,
 				secretRefs,
+				...(hashRecommendations.length ? { hashRecommendations } : {}),
+				...(notes.length ? { _notes: notes } : {}),
 				...(warnings.length ? { verificationWarnings: warnings } : {}),
 			}
 		},

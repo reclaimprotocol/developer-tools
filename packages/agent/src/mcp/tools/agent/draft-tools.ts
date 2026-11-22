@@ -12,7 +12,7 @@ import type { Draft } from '../../../authoring/backend.ts'
 import { checkMatchersOffline } from '../../../proof/check-matchers.ts'
 import { type DraftEdit, editDraftProvider } from '../../../provider/draft.ts'
 import type {
-	ResponseMatch,
+	DraftResponseMatch,
 	ResponseRedaction,
 } from '../../../provider/schema.ts'
 import { verificationWarnings } from '../../../provider/verification-checks.ts'
@@ -28,6 +28,11 @@ const MATCHES_SCHEMA = {
 			type: { type: 'string', enum: ['contains', 'regex'] },
 			value: { type: 'string' },
 			invert: { type: 'boolean' },
+			isOptional: {
+				type: 'boolean',
+				description:
+					'Verification still passes when this match is absent.',
+			},
 		},
 		required: ['type', 'value'],
 	},
@@ -54,7 +59,7 @@ const PARAM_VALUES_SCHEMA = {
 interface MatcherArgs {
 	captureId: string
 	draftId: string
-	responseMatches?: ResponseMatch[]
+	responseMatches?: DraftResponseMatch[]
 	responseRedactions?: ResponseRedaction[]
 	paramValues?: Record<string, string>
 	geoLocation?: string
@@ -109,7 +114,10 @@ export function draftTools(captures: CaptureStore): RegisteredTool[] {
 				+ 'the same. Validates '
 				+ 'regexes and selectors and rejects a matcher that bakes a captured '
 				+ 'value in as a literal, or redactions that reveal more of the '
-				+ 'captured response than the draft did. Returns the secret-free '
+				+ 'captured response than the draft did. May add, change, or remove '
+				+ 'a redaction\'s `hash`, but can\'t empty `responseRedactions`. '
+				+ 'Set `isOptional` on a match to let verification pass without it. '
+				+ 'Returns the secret-free '
 				+ 'provider and, unless `check` is false, a `check_matchers` '
 				+ 'result for the edit. '
 				+ 'Prefer `propose_provider` with a better request or target; use '

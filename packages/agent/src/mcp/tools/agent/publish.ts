@@ -104,8 +104,10 @@ const PROVIDER_SCHEMA: JSONSchema.Schema = {
 		headers: {
 			type: 'object',
 			description:
-				'Request headers from the capture. Secret headers are stripped ' +
-				'before persistence; the client re-supplies them at runtime.',
+				'A published version stores no request headers. At verification ' +
+				'the client intercepts the user\'s real request and sends its own ' +
+				'headers. Draft headers matter only for replay_request and ' +
+				'run_proof.',
 		},
 		paramValues: {
 			type: 'object',
@@ -454,7 +456,13 @@ export function createVersionFromCaptureTool(
 				)
 			}
 
-			return notes.length ? { ...created, _notes: notes } : created
+			notes.push(
+				`The new version (${ver}) is a draft. Call publish_provider_version `
+				+ '(PRIVATE provider) or submit_provider_version_for_review (PUBLIC) '
+				+ 'to make it live.',
+			)
+
+			return { ...created, _notes: notes }
 		},
 	)
 }

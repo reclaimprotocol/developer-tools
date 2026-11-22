@@ -79,6 +79,14 @@ export function evaluateReplay(
 		hints.push('upstream server error')
 	}
 
+	if(status >= 400 && status < 500 && /csrf|xsrf/i.test(body)) {
+		hints.push(
+			'the response mentions a CSRF token: the request likely needs the '
+			+ 'CSRF header from the capture. It is sent as a per-user secret, so '
+			+ 're-draft from a fresh capture if secretRefs lacks it',
+		)
+	}
+
 	for(const m of provider.responseMatches) {
 		// The attestor substitutes paramValues into responseMatches.value
 		// at proof time (`{{name}}` → the value, or → the OPRF nullifier
@@ -106,7 +114,12 @@ export function evaluateReplay(
 		}
 	}
 
-	return { status, body, matchesOriginal: status < 400 }
+	return {
+		status,
+		body,
+		matchesOriginal: status < 400,
+		...(hints.length > 0 ? { hints } : {}),
+	}
 }
 
 /** Detached Node-side replay: sends the request directly from this process,

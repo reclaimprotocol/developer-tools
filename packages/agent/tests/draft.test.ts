@@ -3,9 +3,9 @@ import { describe, it } from 'node:test'
 import {
 	assertNoSecretUrlConflict,
 	assertPortableMatches,
-	defaultSensitiveHash,
 	draftProvider,
 	editDraftProvider,
+	recommendedHash,
 } from '../src/provider/draft.ts'
 import type { CapturedRequest } from '../src/provider/schema.ts'
 import { loadFixture } from './stub-cdp.ts'
@@ -138,13 +138,11 @@ describe('draftProvider', () => {
 		assert.equal(provider.headers?.Accept, 'application/json')
 	})
 
-	it('strips CSRF headers outright; treats everything else as secret',
+	it('routes CSRF headers to secrets and never into provider.headers',
 		() => {
 			// Allowlist classifier: ANY header not on the fixed public list is
-			// secret by default — including a stable id like `spacid` (there's
-			// no more "stable enough to be public" exception). CSRF-named
-			// headers are dropped outright — never even reach secretRefs — since
-			// baking in one captured user's token would replay it for everyone.
+			// secret by default. CSRF-named headers are per-user secrets: never
+			// persisted, and replay and verification send the user's live value.
 			const req: CapturedRequest = {
 				...githubReq,
 				requestHeaders: {
@@ -155,7 +153,7 @@ describe('draftProvider', () => {
 					spacid: '1237',
 				},
 			}
-			const { provider, secretRefs } = draftProvider(
+			const { provider, secretRefs, droppedHeaders } = draftProvider(
 				req,
 				[{ value: '1247', name: 'github-followers' }],
 				'github-followers',
@@ -167,11 +165,11 @@ describe('draftProvider', () => {
 			}
 
 			const secretNames = secretRefs.map((r) => r.name.toLowerCase())
-			assert.ok(!secretNames.includes('csrf'), 'csrf must not survive at all')
-			assert.ok(!secretNames.includes('x-csrf'), 'x-csrf must not survive')
-			assert.ok(secretNames.includes('spacid'), 'spacid is secret, not gone')
-			assert.ok(secretNames.includes('x-request-id'), 'x-request-id is secret')
+			for(const name of ['csrf', 'x-csrf', 'spacid', 'x-request-id']) {
+				assert.ok(secretNames.includes(name), `${name} is a secret`)
+			}
 
+			assert.deepEqual(droppedHeaders, [])
 			assert.equal(provider.headers?.Accept, 'application/json')
 		})
 
@@ -423,43 +421,76 @@ describe('assertPortableMatches', () => {
 	})
 })
 
-describe('defaultSensitiveHash — value-shape anti-leak floor', () => {
-	it('floors unambiguous PII shapes: email / SSN / IBAN', () => {
-		assert.equal(defaultSensitiveHash('ada@example.com'), 'oprf-mpc')
-		assert.equal(defaultSensitiveHash('123-45-6789'), 'oprf-mpc')
-		assert.equal(defaultSensitiveHash('GB82WEST12345698765432'), 'oprf-mpc')
+describe('draftProvider — headers and optional targets', () => {
+	it('dedupes header names case-insensitively', () => {
+		const req: CapturedRequest = {
+			...githubReq,
+			requestHeaders: {
+				...githubReq.requestHeaders,
+				'User-Agent': 'first',
+				'user-agent': 'second',
+				Referer: 'https://a.example/',
+				referer: 'https://a.example/',
+			},
+		}
+		const { provider, secretRefs } = draftProvider(
+			req, [{ value: '1247', name: 'github-followers' }], 'followers',
+		)
+		const agents = Object.keys(provider.headers ?? {})
+			.filter((k) => k.toLowerCase() === 'user-agent')
+		assert.deepEqual(agents, ['User-Agent'])
+		assert.equal(provider.headers?.['User-Agent'], 'second')
+		assert.equal(
+			secretRefs.filter((r) => r.name.toLowerCase() === 'referer').length,
+			1,
+		)
 	})
 
-	it('leaves plaintext: names, usernames, and bare numbers', () => {
-		// The proven identity + anything a user can freely re-case (OPRF is
-		// byte-exact, so hashing a mutable value is grindable) + ambiguous ids
-		// (a private account no. vs a PUBLIC user id / count) → model's call.
-		assert.equal(defaultSensitiveHash('Ada Lovelace'), undefined)
-		assert.equal(defaultSensitiveHash('octocat'), undefined)
-		assert.equal(defaultSensitiveHash('123456789'), undefined)
+	it('maps an optional target to isOptional on its match', () => {
+		const { provider } = draftProvider(
+			githubReq,
+			[{ value: '1247', name: 'github-followers', optional: true }],
+			'followers',
+		)
+		assert.equal(provider.responseMatches[0].isOptional, true)
+	})
+})
+
+describe('recommendedHash — value-shape recommendation', () => {
+	it('recommends unambiguous PII shapes: email / SSN / IBAN', () => {
+		assert.equal(recommendedHash('ada@example.com')?.hash, 'oprf-mpc')
+		assert.equal(recommendedHash('123-45-6789')?.hash, 'oprf-mpc')
+		assert.equal(recommendedHash('GB82WEST12345698765432')?.hash, 'oprf-mpc')
 	})
 
-	it('does not floor a value over the 62-byte OPRF (MPC) cap', () => {
-		const longEmail = `${'a'.repeat(60)}@ex.com` // email-shaped but 67 bytes
-		assert.equal(defaultSensitiveHash(longEmail), undefined)
+	it('stays silent on names, usernames, bare numbers, and long values', () => {
+		assert.equal(recommendedHash('Ada Lovelace'), undefined)
+		assert.equal(recommendedHash('octocat'), undefined)
+		assert.equal(recommendedHash('123456789'), undefined)
+		assert.equal(recommendedHash(`${'a'.repeat(60)}@ex.com`), undefined)
 	})
 })
 
 describe('draftProvider — OPRF integration', () => {
-	it('auto-OPRFs an email VALUE in the drafted recipe', () => {
+	it('leaves an email plaintext and recommends a hash', () => {
 		const req: CapturedRequest = {
 			...githubReq,
 			responseBody: JSON.stringify({
 				name: 'Ada Lovelace', email: 'ada@example.com',
 			}),
 		}
-		const { provider } = draftProvider(
+		const { provider, hashRecommendations } = draftProvider(
 			req, [{ value: 'ada@example.com', name: 'contact' }], 'contact',
 		)
-		assert.equal(provider.responseRedactions?.[0]?.hash, 'oprf-mpc')
+		assert.equal(provider.responseRedactions?.[0]?.hash, undefined)
+		assert.deepEqual(hashRecommendations, [{
+			target: 'contact',
+			hash: 'oprf-mpc',
+			reason: 'value looks like an email address',
+		}])
 	})
 
-	it('honours an explicit per-target hash over the floor', () => {
+	it('honours an explicit per-target hash', () => {
 		// A bare number isn't floored, but the model can still hash it (for
 		// example, a bank account number) via an explicit per-target hash.
 		const req: CapturedRequest = {
@@ -489,20 +520,16 @@ describe('draftProvider — OPRF integration', () => {
 		)
 	})
 
-	it('throws when the URL-visible value is only floor-hashed', () => {
-		// The floor auto-hashes canonical PII shapes even with no explicit
-		// `hash` — the URL conflict must still be caught in that case.
+	it('does not recommend a hash for a value the URL also carries', () => {
 		const req: CapturedRequest = {
 			...githubReq,
 			url: 'https://api.github.com/users/octocat?email=ada@example.com',
 			responseBody: JSON.stringify({ email: 'ada@example.com' }),
 		}
-		assert.throws(
-			() => draftProvider(
-				req, [{ value: 'ada@example.com', name: 'contact' }], 'contact',
-			),
-			/also appears in the request URL/,
+		const { hashRecommendations } = draftProvider(
+			req, [{ value: 'ada@example.com', name: 'contact' }], 'contact',
 		)
+		assert.deepEqual(hashRecommendations, [])
 	})
 
 	it('does not throw when the hashed value is absent from the URL', () => {
@@ -729,7 +756,7 @@ describe('editDraftProvider', () => {
 		)
 	})
 
-	it('refuses to empty the redactions or drop a hash', () => {
+	it('refuses to empty the redactions but may remove or change a hash', () => {
 		const hashed = editDraftProvider(provider, extractions, {
 			responseRedactions: [{
 				jsonPath: '$.followers', regex: '(?<followers>\\d+)', hash: 'oprf-mpc',
@@ -741,14 +768,12 @@ describe('editDraftProvider', () => {
 			}),
 			/can't be emptied/,
 		)
-		assert.throws(
-			() => editDraftProvider(hashed.provider, hashed.extractions, {
-				responseRedactions: [{
-					jsonPath: '$.followers', regex: '(?<followers>\\d+)',
-				}],
-			}),
-			/followers is oprf-mpc-hashed in the draft/,
-		)
+		const unhashed = editDraftProvider(hashed.provider, hashed.extractions, {
+			responseRedactions: [{
+				jsonPath: '$.followers', regex: '(?<followers>\\d+)',
+			}],
+		})
+		assert.equal(unhashed.provider.responseRedactions?.[0]?.hash, undefined)
 	})
 
 	it('pins a country and rejects anything else', () => {

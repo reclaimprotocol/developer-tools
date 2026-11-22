@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { after, before, describe, it } from 'node:test'
-import { replayProvider } from '../src/proof/replay.ts'
+import { evaluateReplay, replayProvider } from '../src/proof/replay.ts'
 
 let srv: Server
 let port: number
@@ -90,5 +90,19 @@ describe('replayProvider', () => {
 		assert.equal(out.matchesOriginal, false)
 		assert.equal(out.status, 401)
 		assert.ok(out.hints?.some((h) => /auth/i.test(h)))
+	})
+})
+
+describe('evaluateReplay', () => {
+	it('hints at the CSRF secret when a 4xx body mentions csrf', () => {
+		const provider = {
+			name: 't',
+			url: 'https://example.com',
+			method: 'GET' as const,
+			responseMatches: [],
+		}
+		const { hints } = evaluateReplay(403, 'Invalid CSRF token', provider)
+		assert.match(hints?.join(' ') ?? '', /CSRF/)
+		assert.equal(evaluateReplay(200, 'csrf', provider).hints, undefined)
 	})
 })

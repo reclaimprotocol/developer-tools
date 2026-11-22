@@ -7,6 +7,7 @@ import {
 	secretUrlCharBudget,
 	splitSecretParamValues,
 	splitSecrets,
+	stripTransportHeaders,
 } from '../src/provider/secrets.ts'
 
 const CASES: Array<[string, boolean]> = [
@@ -163,5 +164,18 @@ describe('assertSecretParamValuesFitUrlBudget', () => {
 			),
 			/character budget/,
 		)
+	})
+})
+
+describe('stripTransportHeaders', () => {
+	it('keeps CSRF headers and dedupes case variants', () => {
+		const out = stripTransportHeaders({
+			'x-csrf-token': 'abc',
+			Host: 'example.com',
+			':authority': 'example.com',
+			'User-Agent': 'first',
+			'user-agent': 'second',
+		})
+		assert.deepEqual(out, { 'x-csrf-token': 'abc', 'User-Agent': 'second' })
 	})
 })

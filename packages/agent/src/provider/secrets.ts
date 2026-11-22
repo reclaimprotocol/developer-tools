@@ -38,6 +38,9 @@ export function classifyHeader(name: string): boolean {
  *    its own; a baked `Host` produces a DUPLICATE that fails the receipt
  *    check / 400s the origin. A stale `content-length` breaks a
  *    re-serialized body.
+ *  CSRF and XSRF token headers aren't in this set. They fall through to the
+ *  allowlist classifier as per-user secrets: never persisted, and replay and
+ *  verification send the user's live value.
  *  Must be stripped BEFORE `splitSecrets`, not after: under the allowlist
  *  classifier these all fall into `secrets` (none are on `PUBLIC_HEADERS`),
  *  and a header like `Host` — whose value trivially mirrors the URL's
@@ -54,19 +57,14 @@ const STRIP_REQUEST_HEADERS = new Set([
 	'host',
 	'content-length',
 	'transfer-encoding',
-	// Per-session anti-CSRF tokens: never portable (baking one in replays a
-	// single captured user's token for everyone, which the origin rejects).
-	// The allowlist classifier already routes these to `secrets` — a proof
-	// attempt sends the CURRENT user's own captured value, which is correct —
-	// but stripping them here means they never even take that path, and
-	// definitely never survive into a persisted, public recipe.
-	'csrf',
-	'x-csrf',
-	'xsrf',
-	'x-xsrf',
-	'x-csrf-token',
-	'xsrf-token',
 ])
+
+/** True for a header that carries transport or conditional-request state, or
+ *  an HTTP/2 pseudo-header. These are dropped on purpose, so they aren't worth
+ *  reporting as lost. */
+export function isTransportHeader(name: string): boolean {
+	return STRIP_REQUEST_HEADERS.has(name.toLowerCase()) || isPseudoHeader(name)
+}
 
 /** True for an HTTP/2 pseudo-header (`:authority`, `:method`, `:path`,
  *  `:scheme`, which CDP surfaces on h2 captures) — never a valid request
@@ -76,7 +74,8 @@ function isPseudoHeader(name: string): boolean {
 	return name.startsWith(':')
 }
 
-/** Drop {@link STRIP_REQUEST_HEADERS} and HTTP/2 pseudo-headers. Call this on
+/** Drop {@link STRIP_REQUEST_HEADERS} and HTTP/2 pseudo-headers, and merge
+ *  names that differ only by case. Call this on
  *  the RAW captured headers before {@link splitSecrets} — both the draft-time
  *  authoring flow and the live per-user verification capture need it, so
  *  neither ends up sending a duplicate `Host` or an invalid `:authority` to
@@ -84,13 +83,18 @@ function isPseudoHeader(name: string): boolean {
 export function stripTransportHeaders(
 	headers: Record<string, string>,
 ): Record<string, string> {
+	// Header names are case-insensitive: keep the first-seen casing and the
+	// last value (the wire headers merge in last).
 	const out: Record<string, string> = {}
+	const seen = new Map<string, string>()
 	for(const [k, v] of Object.entries(headers)) {
-		if(STRIP_REQUEST_HEADERS.has(k.toLowerCase()) || isPseudoHeader(k)) {
+		if(isTransportHeader(k)) {
 			continue
 		}
 
-		out[k] = v
+		const lower = k.toLowerCase()
+		out[seen.get(lower) ?? k] = v
+		seen.set(lower, seen.get(lower) ?? k)
 	}
 
 	return out

@@ -7,6 +7,8 @@
  * `start_capture`, since one capture bundles the tab, its requests, and its
  * drafts) and the rich, credential-aware `run_proof` schema.
  */
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import type { JSONSchema } from 'zod/v4/core'
 import {
 	type AuthoringBackend,
@@ -17,7 +19,12 @@ import {
 import { lookupIpCountry } from '../../../cdp/geo.ts'
 import { runAttestorProof } from '../../../proof/attestor.ts'
 import { checkAttestor } from '../../../proof/check-attestor.ts'
-import { replayProviderInPage } from '../../../proof/page-replay.ts'
+import {
+	controlReplayInPage,
+	replayProviderInPage,
+} from '../../../proof/page-replay.ts'
+import { buildReplayRequest } from '../../../proof/replay.ts'
+import { resolveZkPackageDir } from '../../../proof/zk-files.ts'
 import {
 	DYNAMIC_GEO,
 	normalizeGeoLocation,
@@ -32,16 +39,37 @@ import {
 import type { CaptureEntry, CaptureStore } from './capture.ts'
 import { diagnoseNetworkFailure, shapeRichProofResult } from './proof.ts'
 
+/** Platform and architecture names the gnark libraries use in file names. */
+const GNARK_ARCH: Record<string, string> = { x64: 'x86_64', arm64: 'arm64' }
+
 /**
- * OPRF mode this LOCAL (non-TEE) attestor can actually run. Recipes carry
- * `oprf-mpc` — the canonical/publish mode a TEE expects — but the local dev
- * attestor can't do MPC. gnark `oprf` (Linux/Mac, needs ZK circuits) is the
- * strongest it supports; Windows falls back to server-side `oprf-raw` (no
- * circuits). Proving with the wrong mode fails, which is what pushed the agent
- * to hand-craft a plaintext workaround.
+ * OPRF mode this LOCAL (non-TEE) attestor can actually run. Recipes can carry
+ * `oprf-mpc`, which a TEE expects but the local dev attestor can't do. gnark
+ * `oprf` is the strongest mode it supports, but only where the
+ * `@reclaimprotocol/zk-symmetric-crypto` package ships a gnark library for
+ * this platform and architecture (`bin/gnark/<platform>-<arch>-libprove.so`
+ * and `-libverify.so`). Otherwise it falls back to server-side `oprf-raw`,
+ * which needs no circuits. Proving with the wrong mode fails, which is what
+ * pushed the agent to hand-craft a plaintext workaround.
  */
-const LOCAL_OPRF_MODE: OprfMode =
-	process.platform === 'win32' ? 'oprf-raw' : 'oprf'
+export function localOprfMode(
+	pkgDir: string | undefined = resolveZkPackageDir(),
+	platform: string = process.platform,
+	arch: string = process.arch,
+): OprfMode {
+	if(!pkgDir) {
+		return 'oprf-raw'
+	}
+
+	const gnarkArch = GNARK_ARCH[arch] ?? arch
+	const prefix = join(pkgDir, 'bin', 'gnark', `${platform}-${gnarkArch}`)
+	return existsSync(`${prefix}-libprove.so`)
+		&& existsSync(`${prefix}-libverify.so`)
+		? 'oprf'
+		: 'oprf-raw'
+}
+
+let cachedLocalOprfMode: OprfMode | undefined
 
 /**
  * Clone `provider` with every `oprf-mpc` redaction remapped to the mode this
@@ -58,7 +86,12 @@ function withLocalOprfMode(provider: ReclaimProvider): ReclaimProvider {
 	return {
 		...provider,
 		responseRedactions: reds.map((r) => {
-			return r.hash === 'oprf-mpc' ? { ...r, hash: LOCAL_OPRF_MODE } : r
+			if(r.hash !== 'oprf-mpc') {
+				return r
+			}
+
+			cachedLocalOprfMode ??= localOprfMode()
+			return { ...r, hash: cachedLocalOprfMode }
 		}),
 	}
 }
@@ -97,6 +130,12 @@ async function resolveProofEgress(
 	return country
 		? { geoLocation: country, source: 'developer-ip' }
 		: { source: 'none' }
+}
+
+function withoutCookie(secrets: Record<string, string>) {
+	return Object.fromEntries(
+		Object.entries(secrets).filter(([k]) => k.toLowerCase() !== 'cookie'),
+	)
 }
 
 /** The local backend for one capture: drive its tab over CDP, read its
@@ -144,6 +183,43 @@ function localBackend(
 			const result = await replayProviderInPage(
 				{ sendCdp }, draft.provider, draft.secrets, opts,
 			)
+			const hints = [...(result.hints ?? [])]
+			let control: Awaited<ReturnType<typeof controlReplayInPage>> | undefined
+			// A 4xx may be the recipe or a site defense. Re-send the original
+			// capture to tell them apart.
+			const captured = entry.session.requests.get(draft.requestId)
+			if(!opts?.withoutSecrets && captured
+				&& result.status >= 400 && result.status < 500) {
+				try {
+					const sent = buildReplayRequest(
+						draft.provider, withoutCookie(draft.secrets),
+					)
+					control = await controlReplayInPage(
+						{ sendCdp }, captured, sent.headers,
+					)
+				} catch(err) {
+					hints.push(
+						'control replay of the original request failed: '
+						+ (err instanceof Error ? err.message : String(err)),
+					)
+				}
+			}
+
+			if(control?.ok) {
+				hints.push(
+					'the original captured request succeeded (control.ok) but the '
+					+ 'recipe failed: the recipe is the bug, not a site defense. '
+					+ 'Compare control.headerDiff and fix the recipe. A missing '
+					+ 'non-secret header is a warning, not a blocker.',
+				)
+			} else if(control) {
+				hints.push(
+					'the original captured request also failed (control.status '
+					+ `${control.status}), so this may be a site defense or an `
+					+ 'expired session.',
+				)
+			}
+
 			// Remember the authenticated replay so a failed proof can tell "the
 			// site blocks non-browser clients" from a broken recipe.
 			if(!opts?.withoutSecrets) {
@@ -158,7 +234,8 @@ function localBackend(
 				status: result.status,
 				matchesOriginal: result.matchesOriginal,
 				bodySnippet: result.body.slice(0, 256),
-				...(result.hints !== undefined ? { hints: result.hints } : {}),
+				...(hints.length > 0 ? { hints } : {}),
+				...(control ? { control } : {}),
 			}
 		},
 		prove: async(draft, opts) => {

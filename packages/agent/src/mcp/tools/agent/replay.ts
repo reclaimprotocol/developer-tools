@@ -22,8 +22,13 @@ export function replayTool(resolveBackend: ResolveBackend): RegisteredTool {
 				+ 'values still extract (`valid: true`), the endpoint is public and '
 				+ 'the proof would not bind to the user: choose an auth-bound '
 				+ 'request instead. A 403 that survives one retry and one '
-				+ 'correction is a site defense, not a recipe bug: stop retrying '
-				+ 'and publish from the capture (how_it_works({ topic: "prove" })).',
+				+ 'On a 4xx, `control` re-sends the original captured request '
+				+ 'unchanged from the same browser. If `control.ok` is true, the '
+				+ 'recipe is the bug: fix it from `control.headerDiff` (header '
+				+ 'names only). A 403 that survives one retry and one correction '
+				+ 'is a site defense only when `control` also fails: then stop '
+				+ 'retrying and publish from the capture '
+				+ '(how_it_works({ topic: "prove" })).',
 			inputSchema: objectSchema(
 				{
 					draftId: { type: 'string' },

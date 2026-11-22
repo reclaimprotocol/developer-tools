@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
 import { describe, it } from 'node:test'
 import { startCapture } from '../src/cdp/capture.ts'
+import { REPLAY_SOURCE_URL } from '../src/cdp/capture-engine.ts'
 import type { CdpTabClient } from '../src/cdp/client.ts'
 
 /** Minimal fake CDP client using chrome-remote-interface's raw `event` stream,
@@ -149,5 +150,46 @@ describe('capture race: extra-info before primary event', () => {
 		assert.ok(captured)
 		assert.equal(captured.requestHeaders['Cookie'], 'session=def')
 		assert.equal(captured.requestHeaders['Accept'], '*/*')
+	})
+
+	it('ignores requests initiated by the MCP\'s own replay script', async() => {
+		const { tab, emit } = makeFakeTab()
+		const session = await startCapture(tab)
+		const request = {
+			method: 'GET',
+			url: 'https://api.example.com/me',
+			headers: {},
+		}
+		emit('requestWillBeSent', {
+			requestId: 'replay',
+			request,
+			initiator: {
+				stack: {
+					callFrames: [],
+					parent: { callFrames: [{ url: REPLAY_SOURCE_URL }] },
+				},
+			},
+		})
+		emit('requestWillBeSent', {
+			requestId: 'page',
+			request,
+			initiator: {
+				stack: { callFrames: [{ url: 'https://example.com/app.js' }] },
+			},
+		})
+		for(const requestId of ['replay', 'page']) {
+			emit('responseReceived', {
+				requestId,
+				response: {
+					status: 200,
+					mimeType: 'application/json',
+					encodedDataLength: 0,
+					headers: {},
+				},
+			})
+		}
+
+		assert.equal(session.requests.has('replay'), false)
+		assert.equal(session.requests.has('page'), true)
 	})
 })

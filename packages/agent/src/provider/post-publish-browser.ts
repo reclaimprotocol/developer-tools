@@ -43,10 +43,9 @@ export function postPublishBrowserNotes(
 			+ 'For the InApp SDK, verifier app, or browser extension, keep any '
 			+ 'client-specific interceptor verification as a separate follow-up.'
 		: undefined
-	const dispose = 'Ask the developer whether they want to keep the browser '
-		+ 'open '
-		+ 'for this retest or further edits. Only call dispose_browser after they '
-		+ 'confirm they are done.'
+	const dispose = 'After the version is published and a verification '
+		+ 'succeeds, call dispose_browser to close the browser, unless the '
+		+ 'developer asked to keep it open.'
 
 	return [
 		identity + '. ' + retest,
