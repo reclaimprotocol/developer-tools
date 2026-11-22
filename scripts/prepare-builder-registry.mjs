@@ -7,8 +7,11 @@ import { appendFile, readFile, writeFile } from 'node:fs/promises';
 const PACKAGE_URL = 'https://registry.npmjs.org/@reclaimprotocol/agent';
 const requested = (process.env.RELEASE_VERSION || '').trim();
 // A just-published version can take minutes to appear on the registry, so a
-// release run keeps polling, backing off from 10 to 30 seconds.
-const waitMs = requested ? 5 * 60_000 : 0;
+// release run keeps polling, backing off from 10 to 30 seconds. The wait,
+// including the last lookup, stays under 3 minutes: the check job's 10-minute
+// timeout must also fit npx startup and the MCP check's two 120-second waits.
+const waitMs = requested ? 3 * 60_000 : 0;
+const fetchTimeoutMs = 15_000;
 const firstDelayMs = 10_000;
 const maxDelayMs = 30_000;
 
@@ -39,14 +42,15 @@ async function fetchPackage(version) {
       const response = await fetch(`${PACKAGE_URL}/${encodeURIComponent(version)}`, {
         cache: 'no-store',
         headers: { 'cache-control': 'no-cache' },
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(fetchTimeoutMs),
       });
       if (response.ok) return await response.json();
       lastError = new Error(`npm returned ${response.status} for @reclaimprotocol/agent@${version}.`);
     } catch (error) {
       lastError = error;
     }
-    if (Date.now() + delayMs > deadline) break;
+    // Stop unless the next lookup can finish before the deadline.
+    if (Date.now() + delayMs + fetchTimeoutMs > deadline) break;
     console.log(`${lastError.message} Retrying in ${delayMs / 1000} s.`);
     await new Promise((resolve) => setTimeout(resolve, delayMs));
     delayMs = Math.min(delayMs * 2, maxDelayMs);
