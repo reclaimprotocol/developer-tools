@@ -27,6 +27,7 @@ export {
 	popcornValidateExtraction,
 	type ValidateExtractionResult,
 } from './pod-prover.ts'
+export { withoutAbsentOptionals } from './replay.ts'
 export { ensureZkFiles } from './zk-files.ts'
 // Re-exported attestor-core claim primitive so the agent is the single
 // integration point with @reclaimprotocol/attestor-core across the builder.
