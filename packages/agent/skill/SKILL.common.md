@@ -272,7 +272,19 @@ itself.
   with the developer before you add a hash with `update_draft`. You can also
   change or remove a hash there.
 - Support for OPRF modes varies by verification client. Ask the developer
-  which clients they target before you choose a mode.
+  which clients they target, then pick a mode they all support:
+
+  | Client | `oprf` | `oprf-raw` | `oprf-mpc` |
+  |---|---|---|---|
+  | Reclaim Portal | Yes (TEE) | Non-TEE only; turns the TEE off for the session | Yes (TEE, default) |
+  | Builder verification client | Unconfirmed | No (the TEE rejects it) | Yes |
+  | In-app SDK | Yes (on device) | Untested | Yes (TEE) |
+  | Browser extension | Rewritten to `oprf-raw` | Yes (only mode) | Rewritten to `oprf-raw` |
+  | zkFetch | Alias for `oprf-mpc` | Non-TEE only | Yes (TEE, default) |
+
+  Default to `oprf-mpc`. Never use `oprf-raw` with the Builder verification
+  client. Tell the developer that the browser extension rewrites every mode
+  to `oprf-raw`.
 
 Modes:
 
