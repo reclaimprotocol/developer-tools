@@ -6,7 +6,10 @@ import type { CaptureStore } from '../src/mcp/tools/agent/capture.ts'
 import { draftTools } from '../src/mcp/tools/agent/draft-tools.ts'
 import { shapeRichProofResult } from '../src/mcp/tools/agent/proof.ts'
 import { sharedAuthoringTools } from '../src/mcp/tools/agent/shared.ts'
-import type { MatcherCheckResult } from '../src/proof/check-matchers.ts'
+import {
+	checkMatchersOffline,
+	type MatcherCheckResult,
+} from '../src/proof/check-matchers.ts'
 import type { ReclaimProvider } from '../src/provider/schema.ts'
 import { loadFixture } from './stub-cdp.ts'
 
@@ -62,6 +65,35 @@ describe('check_matchers + update_draft', () => {
 			assert.equal(check.failedAt, 'redaction')
 			assert.match(check.reason ?? '', /Expected status 2xx, got 406/)
 		})
+
+	it('skips an optional value the account lacks, as a client does', () => {
+		const field = (name: string, isOptional?: boolean) => ({
+			match: {
+				type: 'regex' as const,
+				value: `"${name}":"(?<${name}>[^"]+)"`,
+				...(isOptional ? { isOptional } : {}),
+			},
+			redaction: {
+				jsonPath: `$.${name}`,
+				regex: `"${name}":"(?<${name}>[^"]+)"`,
+			},
+		})
+		const uuid = field('uuid')
+		const email = field('email', true)
+		const check = checkMatchersOffline({
+			name: 't',
+			url: 'https://example.com/me',
+			method: 'GET',
+			responseMatches: [uuid.match, email.match],
+			responseRedactions: [uuid.redaction, email.redaction],
+		}, {
+			status: 200,
+			contentType: 'application/json',
+			responseBody: '{"uuid":"u1"}',
+		})
+		assert.equal(check.ok, true, check.reason)
+		assert.deepEqual(check.extractedParameters, { uuid: 'u1' })
+	})
 
 	it('update_draft saves an edit, keeps the id, and checks it', async() => {
 		const { call, draftId, captureId } = await proposeTierDraft()

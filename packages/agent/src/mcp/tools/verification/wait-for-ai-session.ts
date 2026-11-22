@@ -87,9 +87,10 @@ export function waitForAiSessionTool(deps: Deps = {}): RegisteredTool {
 			description:
 				'Waits for an AI verification session and returns a summary. '
 				+ 'Polls every 2 seconds until the lookup is ready or failed, or '
-				+ 'the session ends, or the timeout passes. After you share the '
-				+ 'verification URL, call it with `untilTerminal: true` so it waits '
-				+ 'until the session ends. The result has the lookup state '
+				+ 'the session ends, or the timeout passes. Once the developer can '
+				+ 'see the verification URL in your message, call it with '
+				+ '`untilTerminal: true` so it waits until the session ends. The '
+				+ 'result has the lookup state '
 				+ '(including `aiSdkSessionId`, the ID the claimant sees in the '
 				+ 'Portal), the session status, `outcome` and `outcomeNote` for a '
 				+ 'failed session, `problem` with the failure detail, recent event '

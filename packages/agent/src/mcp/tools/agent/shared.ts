@@ -20,6 +20,7 @@ import { lookupIpCountry } from '../../../cdp/geo.ts'
 import { runAttestorProof } from '../../../proof/attestor.ts'
 import { checkAttestor } from '../../../proof/check-attestor.ts'
 import { replayProviderInPage } from '../../../proof/page-replay.ts'
+import { withoutAbsentOptionals } from '../../../proof/replay.ts'
 import { resolveZkPackageDir } from '../../../proof/zk-files.ts'
 import {
 	DYNAMIC_GEO,
@@ -32,7 +33,11 @@ import {
 	GENERATED_KEY_NOTE,
 	resolveOrCreateEthKey,
 } from '../authenticate/eth-key.ts'
-import type { CaptureEntry, CaptureStore } from './capture.ts'
+import {
+	capturedResponseBody,
+	type CaptureEntry,
+	type CaptureStore,
+} from './capture.ts'
 import { diagnoseNetworkFailure, shapeRichProofResult } from './proof.ts'
 
 /** Platform and architecture names the gnark libraries use in file names. */
@@ -81,14 +86,9 @@ function withLocalOprfMode(provider: ReclaimProvider): ReclaimProvider {
 
 	return {
 		...provider,
-		responseRedactions: reds.map((r) => {
-			if(r.hash !== 'oprf-mpc') {
-				return r
-			}
-
-			cachedLocalOprfMode ??= localOprfMode()
-			return { ...r, hash: cachedLocalOprfMode }
-		}),
+		responseRedactions: reds.map((r) => (r.hash === 'oprf-mpc'
+			? { ...r, hash: cachedLocalOprfMode ??= localOprfMode() }
+			: r)),
 	}
 }
 
@@ -200,10 +200,13 @@ function localBackend(
 			const egress = await resolveProofEgress(
 				draft.provider, opts?.geoLocation, lookupCountry,
 			)
-			// Prove with the locally-runnable OPRF mode and the resolved egress;
-			// the draft (→ published recipe) keeps oprf-mpc and its template.
+			// Prove with the locally-runnable OPRF mode and the resolved egress,
+			// skipping optional values this account lacks; the draft (→ published
+			// recipe) keeps oprf-mpc, its template and every match.
 			const { geoLocation: _template, ...provider } = withLocalOprfMode(
-				draft.provider,
+				withoutAbsentOptionals(
+					draft.provider, capturedResponseBody(entry, draft.requestId),
+				),
 			)
 			void _template
 			const result = await runProof(

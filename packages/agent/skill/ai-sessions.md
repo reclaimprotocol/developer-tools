@@ -57,10 +57,14 @@ appears only in an API response, skip AI sessions and use the provider route
      client.
    - Leave `isEmailVerificationAllowed` `false`. The email option isn't
      working yet.
-2. Call `wait_for_ai_session` until `next` is `share_url`. Share the
-   `verificationUrl` and ask the developer to open it and sign in. In the same
-   turn, call `wait_for_ai_session({ sessionId, untilTerminal: true })`. Don't
-   ask the developer to tell you when they are done.
+2. Call `wait_for_ai_session` until `next` is `share_url`. Write the
+   `verificationUrl` in a message to the developer and ask them to open it and
+   sign in. The developer only sees text you write, not tool results. If your
+   client shows that message while your tools still run, call
+   `wait_for_ai_session({ sessionId, untilTerminal: true })` right after it.
+   Otherwise, end your turn with the URL, and call the wait when the developer
+   replies. Either way, don't ask the developer to tell you when they are
+   done.
 3. Inspect the result with `get_verification_session`,
    `list_verification_events`, `list_verification_deliveries`, and
    `read_callback_events`. `aiSdkSessionId` is the ID the claimant sees in the

@@ -39,7 +39,7 @@ An AI session needs no provider. The user prompt and data points tell Builder wh
   - `loginUrls`: the site's sign-in page or account home, when you know it. Don't guess a deep link.
 - [ ] If the developer named a request, a JSON path, or an internal ID, or the value appears only in an API response, skip this step and go to step 7: AI sessions prove only values a page shows.
 - [ ] Call `wait_for_ai_session` with the returned session ID, until the lookup is ready.
-- [ ] Share the returned `verificationUrl` with the developer: "Open this link and sign in to the site." In the same turn, call `wait_for_ai_session({ sessionId, untilTerminal: true })`. Don't ask them to tell you when they are done.
+- [ ] Write the returned `verificationUrl` in a message to the developer: "Open this link and sign in to the site." They see only text you write, not tool results. If your client shows that message while your tools still run, call `wait_for_ai_session({ sessionId, untilTerminal: true })` right after it. Otherwise, end your turn with the URL and call the wait when they reply. Don't ask them to tell you when they are done.
 - [ ] Use `read_callback_events({ sessionId })` to see the delivered result.
 - [ ] The hosted verification page streams the target site as an image, so text or DOM checks of that page come back empty. Check progress with `wait_for_ai_session`, `list_verification_events`, and `get_verification_session`, not by reading the page.
 

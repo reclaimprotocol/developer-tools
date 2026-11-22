@@ -105,4 +105,23 @@ describe('evaluateReplay', () => {
 		assert.match(hints?.join(' ') ?? '', /CSRF/)
 		assert.equal(evaluateReplay(200, 'csrf', provider).hints, undefined)
 	})
+
+	it('skips an optional matcher the response does not satisfy', () => {
+		const provider = {
+			name: 't',
+			url: 'https://example.com',
+			method: 'GET' as const,
+			responseMatches: [
+				{ type: 'contains' as const, value: '"uuid"' },
+				{ type: 'contains' as const, value: '"email"', isOptional: true },
+			],
+		}
+		const result = evaluateReplay(200, '{"uuid":"u1"}', provider)
+		assert.equal(result.matchesOriginal, true)
+		assert.match(result.hints?.join(' ') ?? '', /optional matcher/)
+		assert.equal(
+			evaluateReplay(200, '{"email":"a@b.c"}', provider).matchesOriginal,
+			false,
+		)
+	})
 })

@@ -97,21 +97,31 @@ export function evaluateReplay(
 			...m,
 			value: expandTemplate(m.value, params),
 		}
-		if(!matchesBody(body, expanded)) {
-			if(status >= 200 && status < 300) {
-				hints.push(
-					`matcher ${expanded.type} did not match — ` +
-					'value may have changed or matcher is too tight',
-				)
-			}
-
-			const result: ReplayResult = { status, body, matchesOriginal: false }
-			if(hints.length > 0) {
-				result.hints = hints
-			}
-
-			return result
+		if(matchesBody(body, expanded)) {
+			continue
 		}
+
+		if(m.isOptional) {
+			hints.push(
+				`optional matcher ${expanded.type} did not match: the value is `
+				+ 'absent for this account, so it is skipped',
+			)
+			continue
+		}
+
+		if(status >= 200 && status < 300) {
+			hints.push(
+				`matcher ${expanded.type} did not match — ` +
+				'value may have changed or matcher is too tight',
+			)
+		}
+
+		const result: ReplayResult = { status, body, matchesOriginal: false }
+		if(hints.length > 0) {
+			result.hints = hints
+		}
+
+		return result
 	}
 
 	return {
@@ -141,6 +151,50 @@ export async function replayProvider(
 	})
 	const body = await res.text()
 	return evaluateReplay(res.status, body, provider)
+}
+
+/**
+ * Drop the optional matches `body` doesn't satisfy, and the redactions that
+ * only extract their values. The attestor has no optional flag: it fails on
+ * any match or redaction that finds nothing. A verification client skips an
+ * absent optional value, so a local proof does the same. Without a body,
+ * returns `provider` unchanged.
+ */
+export function withoutAbsentOptionals(
+	provider: ReclaimProvider,
+	body: string | undefined,
+): ReclaimProvider {
+	if(body === undefined) {
+		return provider
+	}
+
+	const params = provider.paramValues
+	const absent = provider.responseMatches.filter((m) => m.isOptional
+		&& !matchesBody(body, { ...m, value: expandTemplate(m.value, params) }))
+	if(!absent.length) {
+		return provider
+	}
+
+	const keptGroups = new Set(provider.responseMatches
+		.filter((m) => !absent.includes(m))
+		.flatMap((m) => groupNames(m.value)))
+	const absentGroups = new Set(absent.flatMap((m) => groupNames(m.value)))
+	const redactions = provider.responseRedactions?.filter((r) => {
+		const groups = groupNames(r.regex)
+		return !groups.length
+			|| groups.some((g) => keptGroups.has(g) || !absentGroups.has(g))
+	})
+	return {
+		...provider,
+		responseMatches: provider.responseMatches
+			.filter((m) => !absent.includes(m)),
+		...(redactions ? { responseRedactions: redactions } : {}),
+	}
+}
+
+function groupNames(regex: string | undefined) {
+	return [...(regex ?? '').matchAll(/\(\?<([A-Za-z_]\w*)>/g)]
+		.map((m) => m[1] ?? '')
 }
 
 function matchesBody(body: string, m: ResponseMatch): boolean {
