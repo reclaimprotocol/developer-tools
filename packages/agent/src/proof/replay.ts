@@ -159,6 +159,12 @@ export async function replayProvider(
  * any match or redaction that finds nothing. A verification client skips an
  * absent optional value, so a local proof does the same. Without a body,
  * returns `provider` unchanged.
+ *
+ * A match names its values with `{{name}}` placeholders or `(?<name>…)`
+ * groups, and a redaction with `(?<name>…)` groups. A redaction is dropped
+ * when no kept match uses its names and it belongs to an absent match or its
+ * regex finds nothing in `body`. A redaction with only a `jsonPath` or
+ * `xPath` and no names is kept: checking it needs the attestor's engine.
  */
 export function withoutAbsentOptionals(
 	provider: ReclaimProvider,
@@ -175,26 +181,46 @@ export function withoutAbsentOptionals(
 		return provider
 	}
 
-	const keptGroups = new Set(provider.responseMatches
-		.filter((m) => !absent.includes(m))
-		.flatMap((m) => groupNames(m.value)))
-	const absentGroups = new Set(absent.flatMap((m) => groupNames(m.value)))
+	const kept = provider.responseMatches.filter((m) => !absent.includes(m))
+	const keptNames = new Set(kept.flatMap((m) => matchNames(m.value)))
+	const absentNames = new Set(absent.flatMap((m) => matchNames(m.value)))
 	const redactions = provider.responseRedactions?.filter((r) => {
 		const groups = groupNames(r.regex)
-		return !groups.length
-			|| groups.some((g) => keptGroups.has(g) || !absentGroups.has(g))
+		if(groups.some((g) => keptNames.has(g))) {
+			return true
+		}
+
+		return !groups.some((g) => absentNames.has(g))
+			&& (r.regex === undefined || regexFinds(r.regex, body))
 	})
 	return {
 		...provider,
-		responseMatches: provider.responseMatches
-			.filter((m) => !absent.includes(m)),
+		responseMatches: kept,
 		...(redactions ? { responseRedactions: redactions } : {}),
 	}
+}
+
+/** The value names a match uses: `{{name}}` placeholders and named groups. */
+function matchNames(value: string) {
+	return [
+		...[...value.matchAll(/\{\{([^{}]+)\}\}/g)].map((m) => m[1] ?? ''),
+		...groupNames(value),
+	]
 }
 
 function groupNames(regex: string | undefined) {
 	return [...(regex ?? '').matchAll(/\(\?<([A-Za-z_]\w*)>/g)]
 		.map((m) => m[1] ?? '')
+}
+
+/** Whether `regex` finds anything in `body`. An invalid regex counts as a
+ *  find, so the attestor reports it rather than this silently dropping it. */
+function regexFinds(regex: string, body: string) {
+	try {
+		return new RegExp(regex).test(body)
+	} catch{
+		return true
+	}
 }
 
 function matchesBody(body: string, m: ResponseMatch): boolean {
