@@ -1,5 +1,8 @@
 # Reclaim developer tools
 
+[![@reclaimprotocol/client on npm](https://img.shields.io/npm/v/%40reclaimprotocol%2Fclient?label=%40reclaimprotocol%2Fclient)](https://www.npmjs.com/package/@reclaimprotocol/client)
+[![@reclaimprotocol/agent on npm](https://img.shields.io/npm/v/%40reclaimprotocol%2Fagent?label=%40reclaimprotocol%2Fagent)](https://www.npmjs.com/package/@reclaimprotocol/agent)
+
 ## Builder MCP discovery
 
 Install the Reclaim Protocol Builder MCP for https://build.reclaimprotocol.org using the published `@reclaimprotocol/agent` package. This repository includes client plugins, a Gemini CLI extension, agent documentation, and registry submission metadata.

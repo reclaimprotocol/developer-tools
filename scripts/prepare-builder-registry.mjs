@@ -6,8 +6,11 @@ import { appendFile, readFile, writeFile } from 'node:fs/promises';
 
 const PACKAGE_URL = 'https://registry.npmjs.org/@reclaimprotocol/agent';
 const requested = (process.env.RELEASE_VERSION || '').trim();
-const attempts = requested ? 6 : 1;
-const delayMs = 10_000;
+// A just-published version can take minutes to appear on the registry, so a
+// release run keeps polling, backing off from 10 to 30 seconds.
+const waitMs = requested ? 5 * 60_000 : 0;
+const firstDelayMs = 10_000;
+const maxDelayMs = 30_000;
 
 const server = JSON.parse(await readFile('server.json', 'utf8'));
 const published = await fetchPackage(requested || 'latest');
@@ -27,16 +30,26 @@ if (!ready) {
 }
 
 async function fetchPackage(version) {
+  const deadline = Date.now() + waitMs;
+  let delayMs = firstDelayMs;
   let lastError;
-  for (let attempt = 1; attempt <= attempts; attempt++) {
+  for (;;) {
     try {
-      const response = await fetch(`${PACKAGE_URL}/${encodeURIComponent(version)}`, { signal: AbortSignal.timeout(15000) });
+      // no-store: a cached 404 from before the publish must not be reused.
+      const response = await fetch(`${PACKAGE_URL}/${encodeURIComponent(version)}`, {
+        cache: 'no-store',
+        headers: { 'cache-control': 'no-cache' },
+        signal: AbortSignal.timeout(15000),
+      });
       if (response.ok) return await response.json();
       lastError = new Error(`npm returned ${response.status} for @reclaimprotocol/agent@${version}.`);
     } catch (error) {
       lastError = error;
     }
-    if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, delayMs));
+    if (Date.now() + delayMs > deadline) break;
+    console.log(`${lastError.message} Retrying in ${delayMs / 1000} s.`);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    delayMs = Math.min(delayMs * 2, maxDelayMs);
   }
   throw new Error(`Cannot inspect the published Builder package: ${lastError.message}`);
 }
