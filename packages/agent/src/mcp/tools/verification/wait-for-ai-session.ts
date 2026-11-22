@@ -12,14 +12,28 @@ type LookupStatus = 'resolving' | 'ready' | 'started' | 'failed'
 
 type Lookup = {
 	status: LookupStatus
+	/** The session ID the claimant sees in the Portal. */
+	aiSdkSessionId?: string
 	error?: { title?: string, status?: number, detail?: string }
 	dataPoints?: { name: string, isOptional: boolean }[]
 	candidates?: { loginUrl: string, source: string, confidence: number }[]
 }
 
+type OutcomeNote = {
+	label: string
+	retry: 'change_request' | 'retry_same' | 'none'
+	suggestions?: string[]
+}
+
 type SessionState = {
 	status: string
 	callbackDeliveryStatus?: string
+	callbackDeliveryStatuses?: {
+		subscriptionId: string
+		deliveryStatus: string
+	}[]
+	outcome?: string
+	outcomeNote?: OutcomeNote
 	verificationUrl?: string
 }
 
@@ -40,6 +54,13 @@ type Deps = {
 	sleep?: (ms: number) => Promise<void>
 	now?: () => number
 }
+
+const DEFAULT_CANCEL_DETAIL = 'The verification was cancelled.'
+
+const DELIVERY_HINT = 'Callback delivery to your webhook is failing. Call '
+	+ '`list_verification_deliveries` for the error, fix the endpoint and '
+	+ 'check it with `test_callback_subscription`, or call '
+	+ '`delete_callback_subscription` if the webhook is no longer needed.'
 
 const FALLBACK_HINT = 'Retry once with adjusted `dataPoints` or `loginUrls`. '
 	+ 'If that fails too, fall back to the provider route: call '
@@ -66,11 +87,14 @@ export function waitForAiSessionTool(deps: Deps = {}): RegisteredTool {
 			description:
 				'Waits for an AI verification session and returns a summary. '
 				+ 'Polls every 2 seconds until the lookup is ready or failed, or '
-				+ 'the session ends, or the timeout passes. Set `untilTerminal` to '
-				+ 'keep waiting until the session ends, for example after you share '
-				+ 'the verification URL. The result has the lookup state, the session '
-				+ 'status, recent event types, and `next`: `share_url`, '
-				+ '`waiting_for_user`, `waiting_for_lookup`, `done`, or `none`. '
+				+ 'the session ends, or the timeout passes. After you share the '
+				+ 'verification URL, call it with `untilTerminal: true` so it waits '
+				+ 'until the session ends. The result has the lookup state '
+				+ '(including `aiSdkSessionId`, the ID the claimant sees in the '
+				+ 'Portal), the session status, `outcome` and `outcomeNote` for a '
+				+ 'failed session, `problem` with the failure detail, recent event '
+				+ 'types, and `next`: `share_url`, `waiting_for_user`, '
+				+ '`waiting_for_lookup`, `done`, or `none`. '
 				+ 'When `fallback.recommended` is true, follow its `reason`. '
 				+ 'Authenticates with the org API key: `orgToken`, else '
 				+ '`RECLAIM_ORG_SECRET`, else the key saved by `issue_org_token`.',
@@ -92,8 +116,9 @@ export function waitForAiSessionTool(deps: Deps = {}): RegisteredTool {
 					},
 					untilTerminal: {
 						type: 'boolean',
-						description: 'If true, return only when the session ends or '
-							+ 'the lookup fails, not when the lookup is ready.',
+						description: 'Recommended after you share the verification '
+							+ 'URL. If true, return only when the session ends or the '
+							+ 'lookup fails, not when the lookup is ready.',
 					},
 					orgToken: {
 						type: 'string',
@@ -161,6 +186,12 @@ function summarize(
 	const reasonCodes = recent.flatMap((item) => (
 		'reasonCode' in item ? [item.reasonCode] : []
 	))
+	const problem = problemOf(events)
+	const note = session.outcomeNote
+	const deliveryFailed = session.callbackDeliveryStatus === 'attempt_failed'
+		|| !!session.callbackDeliveryStatuses?.some(
+			(item) => item.deliveryStatus === 'attempt_failed',
+		)
 
 	let next: 'share_url' | 'waiting_for_user' | 'waiting_for_lookup'
 		| 'done' | 'none'
@@ -186,19 +217,37 @@ function summarize(
 				: 'waiting_for_lookup'
 	} else {
 		next = 'none'
+		const hint = note?.retry === 'retry_same'
+			? 'Retry the same request once. If it fails the same way, fall back '
+				+ 'to the provider route: call `start_integration` with '
+				+ '`route: \'provider\'`. '
+			: note?.retry === 'none'
+				? 'Retrying will not help. Fix the cause, or fall back to the '
+					+ 'provider route: call `start_integration` with '
+					+ '`route: \'provider\'`. '
+				: FALLBACK_HINT
+		const label = note?.label ? ` ${note.label}` : ''
 		if(session.status === 'rejected') {
 			const code = reasonCodes.at(-1)
-			fallbackReason = `The session was rejected${code ? ` (${code})` : ''}. `
-				+ FALLBACK_HINT
-		} else if(session.status === 'error' || session.status === 'expired') {
-			fallbackReason = `The session ended with status ${session.status}. `
-				+ FALLBACK_HINT
+			fallbackReason = `The session was rejected${code ? ` (${code})` : ''}.`
+				+ `${label} ${hint}`
+		} else if(
+			session.status === 'error'
+			|| session.status === 'expired'
+			|| session.status === 'cancelled'
+		) {
+			fallbackReason = `The session ended with status ${session.status}.`
+				+ `${label} ${hint}`
 		}
 	}
 
 	return {
 		lookup: {
 			status: lookup.status,
+			...(lookup.aiSdkSessionId && {
+				aiSdkSessionId: lookup.aiSdkSessionId,
+				aiSdkSessionIdNote: 'The ID the claimant sees in the Portal.',
+			}),
 			...(lookup.candidates && {
 				candidates: lookup.candidates.map((item) => ({
 					loginUrl: item.loginUrl,
@@ -223,7 +272,14 @@ function summarize(
 		session: {
 			status: session.status,
 			callbackDeliveryStatus: session.callbackDeliveryStatus,
+			...(session.callbackDeliveryStatuses && {
+				callbackDeliveryStatuses: session.callbackDeliveryStatuses,
+			}),
+			...(session.outcome && { outcome: session.outcome }),
+			...(note && { outcomeNote: note }),
+			...(problem && { problem }),
 			events: recent,
+			...(deliveryFailed && { callbackHint: DELIVERY_HINT }),
 		},
 		next,
 		...(next === 'share_url' && session.verificationUrl
@@ -234,6 +290,36 @@ function summarize(
 			: {}),
 		...(timedOut ? { timedOut: true } : {}),
 	}
+}
+
+/**
+ * The last problem reported by any event. A `cancelled` result with the
+ * default detail carries no real reason, so it is reported as unknown.
+ */
+function problemOf(events: SessionEvent[]) {
+	for(const item of events.toReversed()) {
+		const raw = item.eventData?.problem
+		if(!raw || typeof raw !== 'object') {
+			continue
+		}
+
+		const read = (key: string) => {
+			const value = (raw as Record<string, unknown>)[key]
+			return typeof value === 'string' ? value : undefined
+		}
+
+		const detail = read('detail')
+		const reasonCode = read('reasonCode')
+		const unknown = reasonCode === 'unknown' || detail === DEFAULT_CANCEL_DETAIL
+		return {
+			title: read('title'),
+			detail,
+			reasonCode,
+			...(unknown && { reasonUnknown: true }),
+		}
+	}
+
+	return undefined
 }
 
 function defaultSleep(ms: number) {

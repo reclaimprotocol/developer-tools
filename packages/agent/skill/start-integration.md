@@ -42,7 +42,7 @@ Build a new organization-private provider for exactly "{{goal}}". Do not search 
 - [ ] Call `replay_request`, then `replay_request` with `withoutSecrets: true` to confirm the request is auth-bound.
 - [ ] Call `run_proof`. It creates a local test signing key if none exists; tell the developer once afterwards.
 - [ ] Call `create_provider_version_from_capture`. It publishes the kept script as `jsUserScripts`. Follow its `_notes`, then publish the version.
-- [ ] Don't ask whether to close the browser. Mention once in your final summary that it stays open for provider changes and you can close it on request. Call `dispose_browser` only when the developer says so.
+- [ ] After the version is published and a verification succeeds, call `dispose_browser`, unless the developer asked to keep the browser open.
 <!-- endif -->
 
 ## 3. Set up the app
@@ -89,6 +89,7 @@ Do this yourself, not in a subagent.
 ## 4. Wire the provider and test end to end
 
 - [ ] Set the provider ID in the app's server config.
+- [ ] Before the first session, call `list_callback_subscriptions`. A webhook with `consecutiveFailures` of 5 or more no longer counts as active, and creating a session returns 409. Show the developer its `lastError`, and suggest `proxy_callback_events` or a new URL. After the fix, call `test_callback_subscription`. Offer `delete_callback_subscription` for it once.
 - [ ] Confirm the callback route is forwarding: `proxy_callback_events` with no `stop` returns its status. If `blocked` is not empty, the app rejected that session's event: read the callback route's response and logs, fix the app, and check again.
 - [ ] Tell the developer exactly how to test: open the app, click Verify, sign in, and see the stored result. Also test one failure, such as cancelling in the verification tab, and confirm the app shows the failed state with **Try again**.
 - [ ] The hosted verification page streams the target site as an image, so text or DOM checks of that page come back empty. Check progress with `list_verification_events` and `get_verification_session`, not by reading the page.

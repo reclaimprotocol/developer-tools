@@ -140,7 +140,11 @@ Use the API base URL the developer's Builder runs at (production:
 Deployed apps subscribe a callback once (or use
 `create_org_callback_subscription`); local development uses
 `proxy_callback_events` instead. Session creation returns 409 while the org has
-no subscription, and a result is only delivered to
+no subscription, or only webhooks that failed their last 5 deliveries in a row
+(`consecutiveFailures` in `list_callback_subscriptions`). For a failing
+webhook, show the developer its `lastError`, suggest `proxy_callback_events` or
+a new URL, call `test_callback_subscription` after the fix, and offer
+`delete_callback_subscription` once. A result is only delivered to
 subscriptions that include the event the session ends with, so subscribe to all
 five session-ending events:
 
@@ -343,7 +347,12 @@ first provider. Branding and theme data don't affect proof trust.
 
 ## Try a provider without an app
 
-Session creation returns 409 while the org has no callback subscription.
+Session creation returns 409 while the org has no callback subscription, or
+only webhooks with 5 or more `consecutiveFailures` in
+`list_callback_subscriptions`. Check that list first. For a failing webhook,
+show the developer its `lastError`, suggest `proxy_callback_events` or a new
+URL, call `test_callback_subscription` after the fix, and offer
+`delete_callback_subscription` once.
 `read_callback_events` creates the org's pull listener, which satisfies that
 check and holds results for you to read. No tunnel or public URL is needed.
 
