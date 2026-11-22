@@ -2,7 +2,11 @@ import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { after, before, describe, it } from 'node:test'
-import { evaluateReplay, replayProvider } from '../src/proof/replay.ts'
+import {
+	evaluateReplay,
+	replayProvider,
+	withoutAbsentOptionals,
+} from '../src/proof/replay.ts'
 
 let srv: Server
 let port: number
@@ -123,5 +127,32 @@ describe('evaluateReplay', () => {
 			evaluateReplay(200, '{"email":"a@b.c"}', provider).matchesOriginal,
 			false,
 		)
+	})
+
+	it('judges matches as the attestor does: invert and its regex flags', () => {
+		const provider = {
+			name: 't',
+			url: 'https://example.com',
+			method: 'GET' as const,
+			responseMatches: [
+				{
+					type: 'contains' as const,
+					value: '"banned":true',
+					invert: true,
+					isOptional: true,
+				},
+				{
+					type: 'regex' as const,
+					value: '"NAME":"(?<name>.+)"',
+					isOptional: true,
+				},
+			],
+			responseRedactions: [{ regex: '"name":"(?<name>[^"]+)"' }],
+		}
+		const body = '{"name":"a\nb"}'
+		assert.equal(withoutAbsentOptionals(provider, body), provider)
+		const result = evaluateReplay(200, body, provider)
+		assert.equal(result.matchesOriginal, true)
+		assert.equal(result.hints, undefined)
 	})
 })

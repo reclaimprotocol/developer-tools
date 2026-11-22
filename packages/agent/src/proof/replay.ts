@@ -252,8 +252,7 @@ function selects(r: ResponseRedaction, body: string) {
 	}
 
 	try {
-		// The attestor's flags, minus `g`, which makes `test` stateful.
-		const re = new RegExp(regex, 'si')
+		const re = attestorRegex(regex)
 		return found.some((e) => re.test(e))
 	} catch{
 		return true
@@ -264,14 +263,20 @@ function slices(s: string, ranges: { start: number, end: number }[]) {
 	return ranges.map(({ start, end }) => s.slice(start, end))
 }
 
+/** Whether `m` holds for `body`, as the attestor judges it: `invert` flips
+ *  the result, and a regex runs with the attestor's flags. */
 function matchesBody(body: string, m: ResponseMatch): boolean {
-	if(m.type === 'regex') {
-		return new RegExp(m.value).test(body)
+	if(m.type !== 'regex' && m.type !== 'contains') {
+		return false
 	}
 
-	if(m.type === 'contains') {
-		return body.includes(m.value)
-	}
+	const found = m.type === 'regex'
+		? attestorRegex(m.value).test(body)
+		: body.includes(m.value)
+	return found !== Boolean(m.invert)
+}
 
-	return false
+/** The attestor's regex flags, minus `g`, which makes `test` stateful. */
+function attestorRegex(regex: string) {
+	return new RegExp(regex, 'si')
 }
