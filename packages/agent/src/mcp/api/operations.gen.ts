@@ -1,4 +1,4 @@
-// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:22017b62f110).
+// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:a8306265c636).
 // Do not edit by hand: Reclaim regenerates this file upstream.
 // @ts-nocheck
 
@@ -257,7 +257,7 @@ export const MCP_TOOLS = {
 		annotations: {"readOnlyHint":true,"openWorldHint":false},
 	},
 	"AdminSessions": {
-		description: "Explore verification sessions (admin-only)\n\nAdmin only. Search verification sessions across all organizations — filter by `sessionId` (prefix match, at least 5 characters), `providerId` (id or slug), `claimantClientId`, `orgId` (all exact match), `status`, and a `createdAfter`/`createdBefore` time range. Rows link to the org-scoped session detail page (admins can open any org's pages). Newest first, 50 per page, with opaque cursor pagination.",
+		description: "Explore verification sessions (admin-only)\n\nAdmin only. Search verification sessions across all organizations — filter by `sessionId` (prefix match, at least 5 characters, or an exact AI `aiSdkSessionId`), `providerId` (id or slug), `claimantClientId`, `orgId` (all exact match), `status`, and a `createdAfter`/`createdBefore` time range. Rows link to the org-scoped session detail page (admins can open any org's pages). Newest first, 50 per page, with opaque cursor pagination.",
 		inputSchema: toZod({
 			"type": "object",
 			"properties": {
@@ -505,7 +505,7 @@ export const MCP_TOOLS = {
 		annotations: {"openWorldHint":false},
 	},
 	"CreateAiVerificationSession": {
-		description: "Start an AI verification session from a prompt\n\nStarts an AI verification session from a plain-language prompt and optional dataPoints/loginUrls; returns the session with verificationUrl to share with the user. Needs the org token and at least one callback subscription (409 otherwise). No provider or org keypair needed: Builder manages the AI app key. Poll with get_ai_verification_session or wait_for_ai_session.",
+		description: "Start an AI verification session from a prompt\n\nStarts an AI verification session from a plain-language prompt and optional dataPoints/loginUrls; returns the session with verificationUrl to share with the user. Needs the org token and at least one active callback subscription (409 otherwise; a webhook with 5 consecutive failures doesn't count). It proves only values the page shows. For an internal ID, or a value that appears only in an API response, create a provider instead. No provider or org keypair needed: Builder manages the AI app key. Poll with get_ai_verification_session or wait_for_ai_session.",
 		inputSchema: toZod({
 			"type": "object",
 			"properties": {
@@ -670,10 +670,10 @@ export const MCP_TOOLS = {
 								"events": {
 									"type": "array",
 									"minItems": 1,
-									"maxItems": 51,
+									"maxItems": 55,
 									"items": {
 										"type": "string",
-										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md.",
+										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md. The `ai_*` events belong to AI sessions and have phase `search`. The AI agent reports them through the Portal. Their `eventData` is `{ source: \"ai-agent\", aiSdkSessionId, field?, found?, missing? }`. `field`, `found`, and `missing` hold data point names, never values. `ai_search_started` means the agent began looking for the data points. `ai_field_found` means it found one, and `field` names it. `ai_search_completed` means it found every required one. `ai_search_failed` means it didn't, and `missing` names what it lacked.",
 										"enum": [
 											"billing_required",
 											"session_pending",
@@ -725,7 +725,11 @@ export const MCP_TOOLS = {
 											"verification_success",
 											"verification_rejected",
 											"verification_error",
-											"session_expired"
+											"session_expired",
+											"ai_search_started",
+											"ai_field_found",
+											"ai_search_completed",
+											"ai_search_failed"
 										]
 									}
 								}
@@ -755,10 +759,10 @@ export const MCP_TOOLS = {
 									"type": "array",
 									"description": "Events to keep. Defaults to every event.",
 									"minItems": 1,
-									"maxItems": 51,
+									"maxItems": 55,
 									"items": {
 										"type": "string",
-										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md.",
+										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md. The `ai_*` events belong to AI sessions and have phase `search`. The AI agent reports them through the Portal. Their `eventData` is `{ source: \"ai-agent\", aiSdkSessionId, field?, found?, missing? }`. `field`, `found`, and `missing` hold data point names, never values. `ai_search_started` means the agent began looking for the data points. `ai_field_found` means it found one, and `field` names it. `ai_search_completed` means it found every required one. `ai_search_failed` means it didn't, and `missing` names what it lacked.",
 										"enum": [
 											"billing_required",
 											"session_pending",
@@ -810,7 +814,11 @@ export const MCP_TOOLS = {
 											"verification_success",
 											"verification_rejected",
 											"verification_error",
-											"session_expired"
+											"session_expired",
+											"ai_search_started",
+											"ai_field_found",
+											"ai_search_completed",
+											"ai_search_failed"
 										]
 									}
 								}
@@ -929,10 +937,10 @@ export const MCP_TOOLS = {
 								"events": {
 									"type": "array",
 									"minItems": 1,
-									"maxItems": 51,
+									"maxItems": 55,
 									"items": {
 										"type": "string",
-										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md.",
+										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md. The `ai_*` events belong to AI sessions and have phase `search`. The AI agent reports them through the Portal. Their `eventData` is `{ source: \"ai-agent\", aiSdkSessionId, field?, found?, missing? }`. `field`, `found`, and `missing` hold data point names, never values. `ai_search_started` means the agent began looking for the data points. `ai_field_found` means it found one, and `field` names it. `ai_search_completed` means it found every required one. `ai_search_failed` means it didn't, and `missing` names what it lacked.",
 										"enum": [
 											"billing_required",
 											"session_pending",
@@ -984,7 +992,11 @@ export const MCP_TOOLS = {
 											"verification_success",
 											"verification_rejected",
 											"verification_error",
-											"session_expired"
+											"session_expired",
+											"ai_search_started",
+											"ai_field_found",
+											"ai_search_completed",
+											"ai_search_failed"
 										]
 									}
 								}
@@ -1014,10 +1026,10 @@ export const MCP_TOOLS = {
 									"type": "array",
 									"description": "Events to keep. Defaults to every event.",
 									"minItems": 1,
-									"maxItems": 51,
+									"maxItems": 55,
 									"items": {
 										"type": "string",
-										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md.",
+										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md. The `ai_*` events belong to AI sessions and have phase `search`. The AI agent reports them through the Portal. Their `eventData` is `{ source: \"ai-agent\", aiSdkSessionId, field?, found?, missing? }`. `field`, `found`, and `missing` hold data point names, never values. `ai_search_started` means the agent began looking for the data points. `ai_field_found` means it found one, and `field` names it. `ai_search_completed` means it found every required one. `ai_search_failed` means it didn't, and `missing` names what it lacked.",
 										"enum": [
 											"billing_required",
 											"session_pending",
@@ -1069,7 +1081,11 @@ export const MCP_TOOLS = {
 											"verification_success",
 											"verification_rejected",
 											"verification_error",
-											"session_expired"
+											"session_expired",
+											"ai_search_started",
+											"ai_field_found",
+											"ai_search_completed",
+											"ai_search_failed"
 										]
 									}
 								}
@@ -5463,7 +5479,7 @@ export const MCP_TOOLS = {
 		annotations: {"readOnlyHint":true,"openWorldHint":false},
 	},
 	"GetAiVerificationSession": {
-		description: "Get what an AI verification session's prompt resolved to\n\nGets what the AI session's lookup found: status resolving|ready|started|failed, candidates (login pages), merged dataPoints, error. Use get_verification_session for the overall outcome.",
+		description: "Get what an AI verification session's prompt resolved to\n\nGets what the AI session's lookup found: status resolving|ready|started|failed, candidates (login pages), merged dataPoints, error, aiSdkSessionId (the ID the claimant sees in the Portal), and outcome with outcomeNote once the session fails. Use get_verification_session for the overall status.",
 		inputSchema: toZod({
 			"type": "object",
 			"properties": {
@@ -6150,7 +6166,7 @@ export const MCP_TOOLS = {
 		annotations: {"readOnlyHint":true,"openWorldHint":false},
 	},
 	"ListCallbackSubscriptions": {
-		description: "List callback subscriptions for the organization\n\nReturns every callback subscription owned by the organization the presented `OrgToken` resolves to.",
+		description: "List callback subscriptions for the organization\n\nLists the organization's callback subscriptions. A webhook reports lastDeliveryAt, lastError, and consecutiveFailures. At 5 or more consecutive failures it no longer counts as active when you create a session. Check these before you create one, and call test_callback_subscription after a fix.",
 		inputSchema: toZod({
 			"type": "object",
 			"properties": {
@@ -7045,6 +7061,50 @@ export const MCP_TOOLS = {
 			],
 			"additionalProperties": false
 		}),
+		annotations: {"openWorldHint":false},
+	},
+	"TestCallbackSubscription": {
+		description: "Send a test ping to a webhook subscription\n\nSends a test ping to one webhook subscription and returns whether it answered 2xx, with the updated health. Use it after you fix a failing endpoint. A success resets consecutiveFailures. Pull subscriptions return 400. Needs the organization API key as orgToken.",
+		inputSchema: toZod({
+			"type": "object",
+			"properties": {
+				"params": {
+					"type": "object",
+					"properties": {
+						"subscriptionId": {
+							"type": "string",
+							"format": "uuid",
+							"description": "Stable id for a callback subscription."
+						}
+					},
+					"required": [
+						"subscriptionId"
+					],
+					"additionalProperties": false
+				},
+				"query": {
+					"type": "object",
+					"properties": {
+
+					}
+				},
+				"body": {
+					"type": "object"
+				},
+				"orgToken": {
+					"type": "string",
+					"pattern": "^rorg_",
+					"maxLength": 200,
+					"description": "The organization API key (`rorg_…`) this call authenticates with: from `issue_org_token`, or the app's RECLAIM_ORG_SECRET. Defaults to the MCP server's RECLAIM_ORG_SECRET. Never echo it back to the user."
+				}
+			},
+			"required": [
+				"params",
+				"query"
+			],
+			"additionalProperties": false
+		}),
+		orgTokenOnly: true,
 		annotations: {"openWorldHint":false},
 	},
 	"TransferProvider": {
