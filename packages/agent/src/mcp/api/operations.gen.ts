@@ -1,4 +1,4 @@
-// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:cd39afb44b25).
+// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:a149858fe60f).
 // Do not edit by hand: Reclaim regenerates this file upstream.
 // @ts-nocheck
 
@@ -585,7 +585,7 @@ export const MCP_TOOLS = {
 						},
 						"isEmailVerificationAllowed": {
 							"type": "boolean",
-							"description": "Defaults to `false`. If `true`, the share page offers to verify with an email from the brand:\n- when Builder isn't sure where the user signs in (several pages,\n  or one page whose confidence is at most\n  `1 - EMAIL_MIN_CONFIDENCE`, 0.3 by default);\n\n- when the prompt suggests the value usually arrives by email\n  (tickets, bookings, orders, receipts, subscriptions, statements,\n  invoices, shipping), even next to a page you sent in\n  `loginUrls`;\n\n- when the website start fails;\n- when the website verification fails, in which case the session\n  stays open until the user verifies by email, gives up, or the\n  session expires.\n\nIf no login page is found, the session becomes `ready` with no `candidates`. If you omit it, the page doesn't offer email."
+							"description": "Defaults to `false`. If `true`, the share page offers to verify with an email from the brand:\n- when Builder isn't sure where the user signs in (several pages,\n  or one page whose confidence is at most 1 minus the minimum\n  email fit: 0.3 by default, set per session by the\n  `builder.aiEmailMinConfidence` feature flag);\n\n- when the prompt suggests the value usually arrives by email\n  (tickets, bookings, orders, receipts, subscriptions, statements,\n  invoices, shipping, enrollment or admission confirmations,\n  transcripts, student or membership ID cards), even next to a page\n  you sent in `loginUrls`;\n\n- when the website start fails;\n- when the website verification fails, in which case the session\n  stays open until the user verifies by email, gives up, or the\n  session expires.\n\nIf no login page is found, the session becomes `ready` with no `candidates`. If you omit it, the page doesn't offer email."
 						},
 						"context": {
 							"type": "object",

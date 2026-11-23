@@ -63,7 +63,8 @@ appears only in an API response, skip AI sessions and use the provider route
    - `isEmailVerificationAllowed`: suggest `true` to the developer whenever
      the value likely appears in an email the brand sends the user: tickets,
      bookings, orders, receipts, invoices, subscriptions, statements,
-     shipping confirmations. Keep it `false` when the value never appears in
+     shipping confirmations, enrollment or admission confirmations,
+     transcripts, student or membership ID cards. Keep it `false` when the value never appears in
      an email, such as a live balance or a profile setting. With it on:
      - When the prompt suggests email, the share page offers email up front,
        even next to a confident or caller-provided sign-in page.
