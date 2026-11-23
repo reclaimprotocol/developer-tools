@@ -17,6 +17,12 @@ type Lookup = {
 	error?: { title?: string, status?: number, detail?: string }
 	dataPoints?: { name: string, isOptional: boolean }[]
 	candidates?: { loginUrl: string, source: string, confidence: number }[]
+	/** Held when a website attempt failed and the session stays open. */
+	websiteFailure?: {
+		status: string
+		problem: { title?: string, detail?: string, reasonCode?: string }
+		failedAt: string
+	}
 }
 
 type OutcomeNote = {
@@ -61,6 +67,29 @@ const DELIVERY_HINT = 'Callback delivery to your webhook is failing. Call '
 	+ '`list_verification_deliveries` for the error, fix the endpoint and '
 	+ 'check it with `test_callback_subscription`, or call '
 	+ '`delete_callback_subscription` if the webhook is no longer needed.'
+
+/** Extra guidance for the outcomes of the email path and website fallback. */
+const OUTCOME_HINTS: Record<string, string> = {
+	email_not_connected: 'The user opened the email option but never connected '
+		+ 'an email account. Ask them to connect one, then create one new session.',
+	email_not_selected: 'The user connected an email account but never chose a '
+		+ 'message. Ask them to pick the brand email that shows the value.',
+	email_not_accepted: 'The chosen email was not accepted: it was not sent by '
+		+ 'the brand or not addressed to the user. Ask for a message the brand '
+		+ 'sent to the signed-in address.',
+	email_data_not_found: 'The chosen email did not contain the requested '
+		+ 'values. Check that the `dataPoints` describe values the brand email '
+		+ 'shows, or ask the user to pick a different email.',
+	email_check_unavailable: 'The email check was temporarily unavailable. '
+		+ 'Retry the same request once.',
+	gave_up_after_website_failure: 'The website attempt failed and the user '
+		+ 'chose not to verify by email. Read `session.problem`: it is the '
+		+ 'website failure (also in `lookup.websiteFailure`).',
+	expired_after_website_failure: 'The website attempt failed and the user '
+		+ 'did not finish by email before the session expired. Read '
+		+ '`session.problem`: it is the website failure (also in '
+		+ '`lookup.websiteFailure`).',
+}
 
 const FALLBACK_HINT = 'Retry once with adjusted `dataPoints` or `loginUrls`. '
 	+ 'If that fails too, fall back to the provider route: call '
@@ -187,7 +216,7 @@ function summarize(
 	const reasonCodes = recent.flatMap((item) => (
 		'reasonCode' in item ? [item.reasonCode] : []
 	))
-	const problem = problemOf(events)
+	const problem = websiteFailureProblem(lookup, session) ?? problemOf(events)
 	const note = session.outcomeNote
 	const deliveryFailed = session.callbackDeliveryStatus === 'attempt_failed'
 		|| !!session.callbackDeliveryStatuses?.some(
@@ -197,6 +226,7 @@ function summarize(
 	let next: 'share_url' | 'waiting_for_user' | 'waiting_for_lookup'
 		| 'done' | 'none'
 	let fallbackReason: string | undefined
+	let successNote: string | undefined
 	if(lookup.status === 'failed') {
 		const status = lookup.error?.status
 		const why = status === 404
@@ -210,6 +240,12 @@ function summarize(
 		fallbackReason = `${why} ${FALLBACK_HINT}`
 	} else if(session.status === 'success') {
 		next = 'done'
+		if(session.outcome === 'recovered_by_email') {
+			successNote = 'The website attempt failed and the user verified by '
+				+ 'email. The result has `method: \'email\'`: your backend must '
+				+ 'accept email proofs (client 0.2.0 or later, `allowEmailProofs` '
+				+ 'when you pin `hashes` or `proofRecipes`).'
+		}
 	} else if(session.status === 'pending') {
 		next = lookup.status === 'ready'
 			? 'share_url'
@@ -228,17 +264,19 @@ function summarize(
 					+ '`route: \'provider\'`. '
 				: FALLBACK_HINT
 		const label = note?.label ? ` ${note.label}` : ''
+		const outcomeHint = session.outcome && OUTCOME_HINTS[session.outcome]
+		const extra = outcomeHint ? ` ${outcomeHint}` : ''
 		if(session.status === 'rejected') {
 			const code = reasonCodes.at(-1)
 			fallbackReason = `The session was rejected${code ? ` (${code})` : ''}.`
-				+ `${label} ${hint}`
+				+ `${label}${extra} ${hint}`
 		} else if(
 			session.status === 'error'
 			|| session.status === 'expired'
 			|| session.status === 'cancelled'
 		) {
 			fallbackReason = `The session ended with status ${session.status}.`
-				+ `${label} ${hint}`
+				+ `${label}${extra} ${hint}`
 		}
 	}
 
@@ -261,6 +299,13 @@ function summarize(
 					name: item.name,
 					isOptional: item.isOptional,
 				})),
+			}),
+			...(lookup.websiteFailure && {
+				websiteFailure: {
+					status: lookup.websiteFailure.status,
+					failedAt: lookup.websiteFailure.failedAt,
+					problem: lookup.websiteFailure.problem,
+				},
 			}),
 			...(lookup.error && {
 				error: {
@@ -289,6 +334,7 @@ function summarize(
 		...(fallbackReason
 			? { fallback: { recommended: true, reason: fallbackReason } }
 			: {}),
+		...(successNote ? { note: successNote } : {}),
 		...(timedOut ? { timedOut: true } : {}),
 	}
 }
@@ -321,6 +367,25 @@ function problemOf(events: SessionEvent[]) {
 	}
 
 	return undefined
+}
+
+/**
+ * For sessions that ended after a held website failure, the failure is the
+ * reason. Events carry no `problem` on expiry, so read it from the lookup.
+ */
+function websiteFailureProblem(lookup: Lookup, session: SessionState) {
+	const held = lookup.websiteFailure?.problem
+	const ended = session.outcome === 'gave_up_after_website_failure'
+		|| session.outcome === 'expired_after_website_failure'
+	if(!held || !ended) {
+		return undefined
+	}
+
+	return {
+		title: held.title,
+		detail: held.detail,
+		reasonCode: held.reasonCode,
+	}
 }
 
 function defaultSleep(ms: number) {

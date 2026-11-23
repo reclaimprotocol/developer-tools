@@ -115,6 +115,37 @@ export function emailEndpoint(value: string, allowLocal = false): string {
 	return u.href.replace(/\/$/, '')
 }
 
+/**
+ * Validates a URL the Portal sends the user to when the email flow ends.
+ * Accepts `https:`, or loopback `http:` when `allowLocal`. Rejects
+ * credentials and fragments. A query string is allowed. Returns `href`.
+ */
+export function redirectEndpoint(value: string, allowLocal = false): string {
+	let u: URL
+	try {
+		u = new URL(value)
+	} catch{
+		throw new Error('INVALID_EMAIL_REDIRECT')
+	}
+
+	if(
+		value.length > 2048 ||
+		u.username ||
+		u.password ||
+		u.hash ||
+		(u.protocol !== 'https:' &&
+			!(
+				allowLocal &&
+				u.protocol === 'http:' &&
+				['localhost', '127.0.0.1', '[::1]'].includes(u.hostname)
+			))
+	) {
+		throw new Error('INVALID_EMAIL_REDIRECT')
+	}
+
+	return u.href
+}
+
 const endpoint = z.string().max(2048)
 export const emailRequestSchema = z.strictObject({
 	method: z.literal('email'),
@@ -133,6 +164,14 @@ export const emailRequestSchema = z.strictObject({
 	jsonProofResponse: z.boolean(),
 	emailPortalUrl: endpoint,
 	emailApiUrl: endpoint,
+	redirectUrl: endpoint.optional(),
+	cancelRedirectUrl: endpoint.optional(),
+	builder: z
+		.strictObject({
+			sessionId: z.uuid(),
+			verificationClientId: z.uuid().optional(),
+		})
+		.optional(),
 })
 export interface EmailRequest {
 	method: 'email'
@@ -157,6 +196,15 @@ export interface EmailRequest {
 	jsonProofResponse: boolean
 	emailPortalUrl: string
 	emailApiUrl: string
+	/** Where the Portal sends the user after the email is delivered. */
+	redirectUrl?: string
+	/** Where the Portal sends the user after cancel, failure or expiry. */
+	cancelRedirectUrl?: string
+	/** Builder session this request reports to. */
+	builder?: {
+		sessionId: string
+		verificationClientId?: string
+	}
 }
 export function callbackUrl(value: string, defaultUrl: string): string {
 	const u = new URL(value)
@@ -206,6 +254,12 @@ export function validateEmailRequest(
 		r.cancelCallbackUrl,
 		emailDefaultCallback(r.emailApiUrl, r.sessionId, true),
 	)
+	for(const u of [r.redirectUrl, r.cancelRedirectUrl]) {
+		if(u !== undefined && redirectEndpoint(u, allowLocal) !== u) {
+			throw new Error('INVALID_EMAIL_REDIRECT')
+		}
+	}
+
 	if(r.context) {
 		plainCopy(r.context)
 	}
