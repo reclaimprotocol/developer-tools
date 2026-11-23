@@ -6,13 +6,14 @@ import { appendFile, readFile, writeFile } from 'node:fs/promises';
 
 const PACKAGE_URL = 'https://registry.npmjs.org/@reclaimprotocol/agent';
 const requested = (process.env.RELEASE_VERSION || '').trim();
-// A just-published version can take minutes to appear on the registry, so a
-// release run keeps polling, backing off from 10 to 30 seconds. The wait,
-// including the last lookup, stays under 6 minutes. The check job's 10-minute
-// timeout (set in the workflow) must also fit about 1 minute of setup and npx
-// install and the MCP check's two 60-second request waits (initialize and
-// tools/list): 6 + 1 + 2 = 9 minutes worst case, leaving 1 minute of slack.
-const waitMs = requested ? 6 * 60_000 : 0;
+// A just-published version can take minutes to appear on the registry. The
+// check job already starts 5 minutes after the publish (the npm-propagation
+// environment's wait timer, which holds no runner), and a release run then
+// keeps polling, backing off from 10 to 30 seconds, for up to 3 more minutes
+// including the last lookup. The job's 10-minute timeout also fits about
+// 1 minute of setup and npx install and the MCP check's two 60-second request
+// waits (initialize and tools/list): 3 + 1 + 2 = 6 minutes worst case.
+const waitMs = requested ? 3 * 60_000 : 0;
 const fetchTimeoutMs = 15_000;
 const firstDelayMs = 10_000;
 const maxDelayMs = 30_000;
