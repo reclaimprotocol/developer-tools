@@ -1,5 +1,7 @@
 /* eslint-disable @stylistic/max-len */
 export type { EmailProvider } from './providers.ts'
+import type { EmailSenderAcceptance } from './sender-trust.ts'
+export type { EmailSenderAcceptance } from './sender-trust.ts'
 export type EmailContentScope =
 	| 'body-and-attachments'
 	| 'body-only'
@@ -93,6 +95,8 @@ export interface DkimStatus {
 	readonly testing: boolean
 }
 export interface ApprovedEmailSummary {
+	/** Whether the sender matched the policy (`listed`) or was accepted as an unlisted sender for the caller to score. */
+	readonly senderAcceptance: EmailSenderAcceptance
 	readonly rawEmailSha256: string
 	readonly from: string
 	readonly to: readonly string[]
