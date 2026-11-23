@@ -191,6 +191,149 @@ describe('wait_for_ai_session', () => {
 		assert.match(out.fallback.reason, /The value was not found\./)
 	})
 
+	it('keeps waiting after a website failure on a pending session', async() => {
+		const out = await run([
+			{
+				lookup: { status: 'started' },
+				session: { status: 'pending' },
+				events: [
+					{
+						event: 'ai_website_failed',
+						eventData: { source: 'builder', reasonCode: 'x' },
+					},
+					{ event: 'ai_email_connected' },
+				],
+			},
+		])
+		assert.equal(out.next, 'waiting_for_user')
+		assert.equal(out.fallback, undefined)
+		assert.deepEqual(out.session.events, [
+			{ event: 'ai_website_failed', reasonCode: 'x' },
+			{ event: 'ai_email_connected' },
+		])
+	})
+
+	it('explains email outcomes and the website failure', async() => {
+		for(const [outcome, pattern] of [
+			['email_not_connected', /never connected/],
+			['email_not_selected', /never chose/],
+			['email_not_accepted', /not accepted/],
+			['email_data_not_found', /did not contain/],
+			['email_check_unavailable', /temporarily unavailable/],
+			['gave_up_after_website_failure', /website failure/],
+			['expired_after_website_failure', /website failure/],
+		] as const) {
+			const out = await run([
+				{
+					lookup: { status: 'started' },
+					session: {
+						status: outcome.startsWith('expired') ? 'expired' : 'error',
+						outcome,
+					},
+				},
+			])
+			assert.match(out.fallback?.reason ?? '', pattern, outcome)
+		}
+	})
+
+	it('reads the website failure from the lookup on expiry', async() => {
+		const out = await run([
+			{
+				lookup: {
+					status: 'started',
+					websiteFailure: {
+						status: 'error',
+						failedAt: '2026-11-23T00:00:00Z',
+						problem: {
+							detail: 'Sign-in blocked',
+							reasonCode: 'SignInBlocked',
+						},
+					},
+				},
+				session: {
+					status: 'expired',
+					outcome: 'expired_after_website_failure',
+				},
+				events: [{
+					event: 'verification_error',
+					eventData: { reason: 'session expired' },
+				}],
+			},
+		]) as unknown as {
+			session: { problem: { detail: string, reasonCode: string } }
+		}
+		assert.equal(out.session.problem.detail, 'Sign-in blocked')
+		assert.equal(out.session.problem.reasonCode, 'SignInBlocked')
+	})
+
+	it('never falls back early after a website failure', async() => {
+		for(const status of ['started', 'ready'] as const) {
+			const out = await run([
+				{
+					lookup: { status },
+					session: { status: 'pending' },
+					events: [
+						{
+							event: 'ai_website_failed',
+							eventData: { source: 'builder', reasonCode: 'x' },
+						},
+					],
+				},
+			])
+			assert.equal(
+				out.next,
+				status === 'ready' ? 'share_url' : 'waiting_for_user',
+			)
+			assert.equal(out.fallback, undefined, status)
+		}
+	})
+
+	it('shows email hints for rejected and cancelled sessions', async() => {
+		for(const status of ['rejected', 'cancelled'] as const) {
+			const out = await run([
+				{
+					lookup: { status: 'started' },
+					session: { status, outcome: 'email_not_accepted' },
+				},
+			])
+			assert.match(out.fallback?.reason ?? '', /not accepted/, status)
+		}
+	})
+
+	it('adds no note on success without an email recovery', async() => {
+		for(const outcome of [undefined, 'proof_failed']) {
+			const out = await run([
+				{
+					lookup: { status: 'started' },
+					session: { status: 'success', outcome },
+				},
+			]) as unknown as { note?: string }
+			assert.equal(out.note, undefined)
+		}
+	})
+
+	it('uses only the default reason for an unknown outcome', async() => {
+		const out = await run([
+			{
+				lookup: { status: 'started' },
+				session: { status: 'error', outcome: 'something_new' },
+			},
+		])
+		assert.ok(out.fallback?.reason)
+		assert.doesNotMatch(out.fallback.reason, /email|website failure/)
+	})
+
+	it('flags email proofs after an email recovery', async() => {
+		const out = await run([
+			{
+				lookup: { status: 'started' },
+				session: { status: 'success', outcome: 'recovered_by_email' },
+			},
+		]) as unknown as { next: string, note: string }
+		assert.equal(out.next, 'done')
+		assert.match(out.note, /allowEmailProofs/)
+	})
+
 	it('treats a default cancel detail as an unknown reason', async() => {
 		const out = await run([
 			{

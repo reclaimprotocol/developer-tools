@@ -1,4 +1,4 @@
-// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:a8306265c636).
+// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:cd39afb44b25).
 // Do not edit by hand: Reclaim regenerates this file upstream.
 
 export const ROUTES = {
@@ -99,6 +99,7 @@ export const ROUTES = {
 	"GetVerificationRecipe": {"method":"get","path":"/verifications/sessions/{sessionId}/recipe"},
 	"GetVerificationResult": {"method":"get","path":"/verifications/sessions/{sessionId}/result"},
 	"GetVerificationSession": {"method":"get","path":"/verifications/sessions/{sessionId}"},
+	"GiveUpAiVerificationSession": {"method":"post","path":"/verifications/ai-sessions/{sessionId}/give-up"},
 	"IdentifyAnalyticsClient": {"method":"post","path":"/analytics/identify"},
 	"ImportDevtoolsProvider": {"method":"post","path":"/providers/import/devtools"},
 	"Index": {"method":"get","path":"/"},

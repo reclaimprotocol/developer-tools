@@ -50,13 +50,29 @@ appears only in an API response, skip AI sessions and use the provider route
      one required identifier. Other fields are optional. `isOptional` defaults
      to `false`. Names match `^[A-Za-z_][A-Za-z0-9_]{0,63}$`. Describe each
      one. Never invent values.
-   - `loginUrls`: the sign-in page or the account home page, when the
-     developer knows it. Don't guess a deep link.
+   - `loginUrls`: only a sign-in or account home page the developer gave
+     you, or one from their own app or code. Never pass a page you found by
+     searching the web: Builder trusts caller pages and skips its own web
+     search. With `isEmailVerificationAllowed`, it offers email next to them
+     only when the prompt suggests email, several pages are given, or the
+     website attempt fails. A wrong page sends every user to the wrong
+     site. When unsure, omit it and let Builder find the page.
    - Omit `verificationClientUrl`. Only the portals verification client
      supports AI sessions today, and it is the default. Don't pass another
      client.
-   - Leave `isEmailVerificationAllowed` `false`. The email option isn't
-     working yet.
+   - `isEmailVerificationAllowed`: suggest `true` to the developer whenever
+     the value likely appears in an email the brand sends the user: tickets,
+     bookings, orders, receipts, invoices, subscriptions, statements,
+     shipping confirmations. Keep it `false` when the value never appears in
+     an email, such as a live balance or a profile setting. With it on:
+     - When the prompt suggests email, the share page offers email up front,
+       even next to a confident or caller-provided sign-in page.
+     - When the website attempt fails, the user returns to the share page and
+       can verify by email or give up. The session stays open meanwhile. On
+       give-up or expiry, the result carries the website failure's reason.
+     - The developer's backend must accept email proofs: client 0.2.0 or
+       later, and `allowEmailProofs: true` if it pins `hashes` or
+       `proofRecipes` (see "Verifying results" below).
 2. Call `wait_for_ai_session` until `next` is `share_url`. Write the
    `verificationUrl` in a message to the developer and ask them to open it and
    sign in. The developer only sees text you write, not tool results. If your
@@ -78,7 +94,25 @@ appears only in an API response, skip AI sessions and use the provider route
    `list_verification_events`. The outcome says where the session stopped:
    `not_started`, `start_failed`, `sign_in_not_completed`, `data_not_found`,
    `proof_failed`, `missing_data_points`, `context_mismatch`, `invalid_proof`,
-   or `closed_by_user`.
+   or `closed_by_user`. With email enabled, these outcomes also appear:
+   - `recovered_by_email`: success. The website failed and the user verified
+     by email. The result has `method: 'email'`, and `wait_for_ai_session`
+     adds a `note` reminding you to accept email proofs.
+   - `gave_up_after_website_failure`, `expired_after_website_failure`: the
+     website failed and the user gave up or let the session expire. Diagnose
+     `session.problem` (copied from `lookup.websiteFailure`): it is the
+     website failure.
+   - `email_not_connected`, `email_not_selected`: the user stopped before
+     connecting an email account or choosing a message.
+   - `email_not_accepted`: the message wasn't from the brand or wasn't
+     addressed to the user.
+   - `email_data_not_found`: the message lacks the requested values. Check
+     that `dataPoints` describe values the brand email shows.
+   - `email_check_unavailable`: temporary. Retry the same request.
+   The timeline can include `ai_website_failed`, `ai_email_connected`,
+   `ai_email_selected` (repeatable), `ai_email_rejected` (repeatable, with a
+   `reasonCode` such as `EmailSenderNotAllowed` or `EmailDataNotFound`), and
+   `ai_email_verified`.
 2. Follow `outcomeNote.retry`:
    - `change_request`: change the prompt, `dataPoints`, or `loginUrls`, then
      create one new session.
