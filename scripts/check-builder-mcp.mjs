@@ -37,7 +37,7 @@ child.on('exit', () => rejectPending('Builder MCP exited before completing disco
 function request(method, params) {
   return new Promise((resolve, reject) => {
     const id = nextId++;
-    const timer = setTimeout(() => { pending.delete(id); reject(new Error('Builder MCP discovery timed out.')); }, 120000);
+    const timer = setTimeout(() => { pending.delete(id); reject(new Error('Builder MCP discovery timed out.')); }, 60000);
     pending.set(id, { resolve, reject, timer });
     child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
   });
