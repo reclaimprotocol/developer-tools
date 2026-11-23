@@ -29,8 +29,12 @@ concurrency:
 
 jobs:
   # Runs the published package with npx, so it gets no OIDC identity.
+  # The npm-propagation environment has a 5-minute wait timer: npm can take
+  # minutes to serve a new version, and a wait timer delays the job without
+  # holding a runner.
   check:
     runs-on: ubuntu-latest
+    environment: npm-propagation
     timeout-minutes: 10
     permissions:
       contents: read
