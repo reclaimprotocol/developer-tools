@@ -24,6 +24,7 @@ import {
 	type EmailProvider,
 	type EmailRequest,
 	emailRequestSchema,
+	matchesEmailDomain,
 	plainCopy,
 	snapshotEmailProof,
 	strictJson,
@@ -274,6 +275,15 @@ function verifyRequestBinding(
 			extractedParameters: proof.extractedParameterValues,
 		}),
 		'email proof context does not match the request',
+	)
+	// The issuer only signs an email whose DKIM signature passed for an
+	// allowed domain. Checking the signer here too means a proof whose
+	// signer the request never allowed fails in every mode.
+	const { signingDomain } = proof.emailProof.acceptedDkimSignature
+	invalidUnless(
+		request.policy.allowedDkimSigningDomains
+			.some((pattern) => matchesEmailDomain(pattern, signingDomain)),
+		'email proof signer is not allowed by the request',
 	)
 }
 
