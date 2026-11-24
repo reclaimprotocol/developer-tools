@@ -65,7 +65,9 @@ appears only in an API response, skip AI sessions and use the provider route
      bookings, orders, receipts, invoices, subscriptions, statements,
      shipping confirmations, enrollment or admission confirmations,
      transcripts, student or membership ID cards. Keep it `false` when the value never appears in
-     an email, such as a live balance or a profile setting. With it on:
+     an email, such as a live balance or a profile setting. For mail sent by
+     an event or ticketing platform, name the sender's address, or the
+     platform's event or organizer page URL, in the prompt. With it on:
      - When the prompt suggests email, the share page offers email up front,
        even next to a confident or caller-provided sign-in page.
      - When the website attempt fails, the user returns to the share page and
@@ -106,7 +108,10 @@ appears only in an API response, skip AI sessions and use the provider route
    - `email_not_connected`, `email_not_selected`: the user stopped before
      connecting an email account or choosing a message.
    - `email_not_accepted`: the message wasn't from the brand or wasn't
-     addressed to the user.
+     addressed to the user. Mail sent by an event or ticketing platform is
+     accepted only from the event's organizer: recreate the session with the
+     sender's address, or the platform's event or organizer page URL, in the
+     prompt.
    - `email_data_not_found`: the message lacks the requested values. Check
      that `dataPoints` describe values the brand email shows.
    - `email_check_unavailable`: temporary. Retry the same request.

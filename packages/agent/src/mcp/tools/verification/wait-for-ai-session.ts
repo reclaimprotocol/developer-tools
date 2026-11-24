@@ -76,7 +76,10 @@ const OUTCOME_HINTS: Record<string, string> = {
 		+ 'message. Ask them to pick the brand email that shows the value.',
 	email_not_accepted: 'The chosen email was not accepted: it was not sent by '
 		+ 'the brand or not addressed to the user. Ask for a message the brand '
-		+ 'sent to the signed-in address.',
+		+ 'sent to the signed-in address. Mail sent by an event or ticketing '
+		+ 'platform is accepted only from the event\'s organizer. To accept it, '
+		+ 'create a new session with the sender\'s address, or the platform\'s '
+		+ 'event or organizer page URL, in the prompt.',
 	email_data_not_found: 'The chosen email did not contain the requested '
 		+ 'values. Check that the `dataPoints` describe values the brand email '
 		+ 'shows, or ask the user to pick a different email.',
