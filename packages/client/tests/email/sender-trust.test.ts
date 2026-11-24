@@ -1,13 +1,7 @@
 /* eslint-disable @stylistic/max-len */
 import assert from 'node:assert/strict'
 import { Resolver } from 'node:dns/promises'
-import {
-	after,
-	before,
-	describe,
-	it,
-	mock
-} from 'node:test'
+import { after, before, mock } from 'node:test'
 import { validateAiContentCheck } from '../../src/email/core/ai-check.ts'
 import {
 	approveWithResolver,
@@ -33,7 +27,9 @@ import {
 	signCoreEmail,
 } from './core/fixtures/email-core.ts'
 import { publicRecord, unsignedEmail } from './core/fixtures/signed-email.ts'
-import { sandboxSkip } from './core/vitest-compat.ts'
+// The compat `it` also skips when the sandbox fails at runtime, as on CI
+// runners whose probe passes but whose worker can't start.
+import { describe, it, sandboxSkip } from './core/vitest-compat.ts'
 import { emailProof, emailRequest, ISSUER } from './fixtures.ts'
 
 // Every selector resolves to the fixture key, whatever the signing domain.
