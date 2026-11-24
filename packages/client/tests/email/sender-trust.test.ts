@@ -18,6 +18,7 @@ import {
 	canonicalJson,
 	type EmailRequest,
 	type EmailSenderTrust,
+	emailSenderTrustSchema,
 	validateEmailRequest,
 } from '../../src/email/core/protocol.ts'
 import { verifyEmailProof } from '../../src/email/index.ts'
@@ -102,6 +103,8 @@ describe('unlisted sender approval', () => {
 			kind: 'unlisted',
 			signingDomain: 'brand.example',
 			fromDomain: 'mail.brand.example',
+			fromAddress: 'news@mail.brand.example',
+			fromName: 'Brand',
 			subject: 'Your September earnings',
 		})
 	})
@@ -165,8 +168,26 @@ describe('unlisted sender approval', () => {
 			kind: 'unlisted',
 			signingDomain: 'example.com',
 			fromDomain: 'example.com',
+			fromAddress: 'other@example.com',
+			fromName: 'Other',
 			subject: 'Your September earnings',
 		})
+	})
+
+	it('decodes and bounds the signed From display name', skipIfNoSandbox, async() => {
+		const encoded = await brandMail({ from: '=?UTF-8?B?Q2Fmw6k=?= <News@Mail.Brand.example>' })
+		const summary = await approve(encoded, unlisted)
+		assert.equal(summary.senderAcceptance.kind, 'unlisted')
+		if(summary.senderAcceptance.kind === 'unlisted') {
+			assert.equal(summary.senderAcceptance.fromName, 'Café')
+			assert.equal(summary.senderAcceptance.fromAddress, 'news@mail.brand.example')
+		}
+
+		const long = await brandMail({ from: `"${'x'.repeat(400)}" <news@mail.brand.example>` })
+		const longSummary = await approve(long, unlisted)
+		if(longSummary.senderAcceptance.kind === 'unlisted') {
+			assert.equal(longSummary.senderAcceptance.fromName.length, 200)
+		}
 	})
 
 	it('rejects a Subject that appears more than once', async() => {
@@ -361,6 +382,15 @@ describe('verifyEmailProof with sender scoring', () => {
 			verify(undefined, { claimContext }, plain),
 			/does not match the request/,
 		)
+	})
+
+	it('accepts the evidence reasons in a trust claim', async() => {
+		for(const reason of ['brand-evidence', 'organizer-evidence', 'name-evidence', 'no-evidence']) {
+			assert.deepEqual(
+				emailSenderTrustSchema.parse({ ...scored, reason }),
+				{ ...scored, reason },
+			)
+		}
 	})
 
 	it('rejects a malformed trust claim', async() => {

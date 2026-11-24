@@ -1,4 +1,4 @@
-// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:5f9550b5303f).
+// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:a4ac08508dd7).
 // Do not edit by hand: Reclaim regenerates this file upstream.
 
 export const ROUTES = {
@@ -37,6 +37,7 @@ export const ROUTES = {
 	"CancelBillingSubscription": {"method":"delete","path":"/orgs/{orgId}/billing/subscription"},
 	"CancelPublicListingRequest": {"method":"post","path":"/providers/{providerId}/versions/{version}/cancel-review"},
 	"ChangeOrgPlan": {"method":"post","path":"/orgs/{orgId}/billing/change-plan"},
+	"CheckVerificationEmailSender": {"method":"post","path":"/verifications/sessions/{sessionId}/email-sender"},
 	"ConsentPage": {"method":"get","path":"/oauth/consent"},
 	"CreateAgentBrowserSession": {"method":"post","path":"/orgs/{orgId}/agent-browser-sessions"},
 	"CreateAiVerificationSession": {"method":"post","path":"/verifications/ai-sessions"},

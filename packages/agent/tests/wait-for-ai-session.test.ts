@@ -217,7 +217,7 @@ describe('wait_for_ai_session', () => {
 		for(const [outcome, pattern] of [
 			['email_not_connected', /never connected/],
 			['email_not_selected', /never chose/],
-			['email_not_accepted', /not accepted/],
+			['email_not_accepted', /not accepted.*organizer.*address.*page URL/],
 			['email_data_not_found', /did not contain/],
 			['email_check_unavailable', /temporarily unavailable/],
 			['gave_up_after_website_failure', /website failure/],

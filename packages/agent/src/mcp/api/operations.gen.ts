@@ -1,4 +1,4 @@
-// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:5f9550b5303f).
+// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:a4ac08508dd7).
 // Do not edit by hand: Reclaim regenerates this file upstream.
 // @ts-nocheck
 
@@ -585,7 +585,7 @@ export const MCP_TOOLS = {
 						},
 						"isEmailVerificationAllowed": {
 							"type": "boolean",
-							"description": "Defaults to `false`. If `true`, the share page offers to verify with an email from the brand:\n- when Builder isn't sure where the user signs in (several pages,\n  or one page whose confidence is at most 1 minus the minimum\n  email fit: 0.3 by default, set per session by the\n  `builder.aiEmailMinConfidence` feature flag);\n\n- when the prompt suggests the value usually arrives by email\n  (tickets, bookings, orders, receipts, subscriptions, statements,\n  invoices, shipping, enrollment or admission confirmations,\n  transcripts, student or membership ID cards), even next to a page\n  you sent in `loginUrls`;\n\n- when the website start fails;\n- when the website verification fails, in which case the session\n  stays open until the user verifies by email, gives up, or the\n  session expires.\n\nIf no login page is found, the session becomes `ready` with no `candidates`. If you omit it, the page doesn't offer email."
+							"description": "Defaults to `false`. If `true`, the share page offers to verify with an email from the brand:\n- when Builder isn't sure where the user signs in (several pages,\n  or one page whose confidence is at most 1 minus the minimum\n  email fit: 0.3 by default, set per session by the\n  `builder.aiEmailMinConfidence` feature flag);\n\n- when the prompt suggests the value usually arrives by email\n  (tickets, bookings, orders, receipts, subscriptions, statements,\n  invoices, shipping, enrollment or admission confirmations,\n  transcripts, student or membership ID cards), even next to a page\n  you sent in `loginUrls`;\n\n- when the website start fails;\n- when the website verification fails, in which case the session\n  stays open until the user verifies by email, gives up, or the\n  session expires.\n\nIf no login page is found, the session becomes `ready` with no `candidates`. If you omit it, the page doesn't offer email.\nOnly the brand's own email counts. Builder takes the brand's domains from the prompt and the lookup. Mail that an event or ticketing platform (such as Luma) sends for the brand counts only from the event's organizer. Builder finds the organizer on the brand's site (named in the prompt, or found by search and linked to and from the platform's event listing), on the event's listing page, or on a platform page that the prompt names. When the email comes from a platform, name the sender's address or the platform's event or organizer page URL in the prompt, such as `from devfestmumbai@calendar.luma-mail.com` or `from https://luma.com/luh11tqc`."
 						},
 						"context": {
 							"type": "object",
@@ -670,10 +670,10 @@ export const MCP_TOOLS = {
 								"events": {
 									"type": "array",
 									"minItems": 1,
-									"maxItems": 60,
+									"maxItems": 65,
 									"items": {
 										"type": "string",
-										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md. The `ai_*` events belong to AI sessions and have phase `search`. The AI agent reports them through the Portal. Their `eventData` is `{ source: \"ai-agent\", aiSdkSessionId, field?, found?, missing? }`. `field`, `found`, and `missing` hold data point names, never values. `ai_search_started` means the agent began looking for the data points. `ai_field_found` means it found one, and `field` names it. `ai_search_completed` means it found every required one. `ai_search_failed` means it didn't, and `missing` names what it lacked.\nFive more `ai_*` events cover the email fallback. `ai_website_failed` is only for Builder: it records that the website attempt failed, with `{ source: \"builder\", aiSdkSessionId, status, reasonCode }`. The Portal reports the others with `{ source: \"ai-agent\", aiSdkSessionId }` plus the fields noted here. `ai_email_connected` means the user connected an email account. `ai_email_selected` means the user picked an email to check, and can repeat. `ai_email_rejected` means the check rejected an email, adds `reasonCode`, and can repeat. `ai_email_verified` means the agent verified an email, and adds `found` and `missing`.",
+										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md. The `ai_*` events belong to AI sessions and have phase `search`. The AI agent reports them through the Portal. Their `eventData` is `{ source: \"ai-agent\", aiSdkSessionId, field?, found?, missing? }`. `field`, `found`, and `missing` hold data point names, never values. `ai_search_started` means the agent began looking for the data points. `ai_field_found` means it found one, and `field` names it. `ai_search_completed` means it found every required one. `ai_search_failed` means it didn't, and `missing` names what it lacked.\nSix more `ai_*` events cover the email fallback. `ai_website_failed` is only for Builder: it records that the website attempt failed, with `{ source: \"builder\", aiSdkSessionId, status, reasonCode }`. The Portal reports the others with `{ source: \"ai-agent\", aiSdkSessionId }` plus the fields noted here. `ai_email_connected` means the user connected an email account. `ai_email_selected` means the user picked an email to check, and can repeat. `ai_email_searched` means the user searched their mailbox, adds `query` (masked by the Portal, at most 200 characters), `resultCount` (a whole number, 0 or more), and `suggested` (true when the query is the unchanged prefilled suggestion), and can repeat. `ai_email_rejected` means the check rejected an email, adds `reasonCode`, and can repeat. `ai_email_verified` means the agent verified an email, and adds `found` and `missing`.",
 										"enum": [
 											"billing_required",
 											"session_pending",
@@ -733,6 +733,7 @@ export const MCP_TOOLS = {
 											"ai_website_failed",
 											"ai_email_connected",
 											"ai_email_selected",
+											"ai_email_searched",
 											"ai_email_rejected",
 											"ai_email_verified"
 										]
@@ -764,10 +765,10 @@ export const MCP_TOOLS = {
 									"type": "array",
 									"description": "Events to keep. Defaults to every event.",
 									"minItems": 1,
-									"maxItems": 60,
+									"maxItems": 65,
 									"items": {
 										"type": "string",
-										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md. The `ai_*` events belong to AI sessions and have phase `search`. The AI agent reports them through the Portal. Their `eventData` is `{ source: \"ai-agent\", aiSdkSessionId, field?, found?, missing? }`. `field`, `found`, and `missing` hold data point names, never values. `ai_search_started` means the agent began looking for the data points. `ai_field_found` means it found one, and `field` names it. `ai_search_completed` means it found every required one. `ai_search_failed` means it didn't, and `missing` names what it lacked.\nFive more `ai_*` events cover the email fallback. `ai_website_failed` is only for Builder: it records that the website attempt failed, with `{ source: \"builder\", aiSdkSessionId, status, reasonCode }`. The Portal reports the others with `{ source: \"ai-agent\", aiSdkSessionId }` plus the fields noted here. `ai_email_connected` means the user connected an email account. `ai_email_selected` means the user picked an email to check, and can repeat. `ai_email_rejected` means the check rejected an email, adds `reasonCode`, and can repeat. `ai_email_verified` means the agent verified an email, and adds `found` and `missing`.",
+										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md. The `ai_*` events belong to AI sessions and have phase `search`. The AI agent reports them through the Portal. Their `eventData` is `{ source: \"ai-agent\", aiSdkSessionId, field?, found?, missing? }`. `field`, `found`, and `missing` hold data point names, never values. `ai_search_started` means the agent began looking for the data points. `ai_field_found` means it found one, and `field` names it. `ai_search_completed` means it found every required one. `ai_search_failed` means it didn't, and `missing` names what it lacked.\nSix more `ai_*` events cover the email fallback. `ai_website_failed` is only for Builder: it records that the website attempt failed, with `{ source: \"builder\", aiSdkSessionId, status, reasonCode }`. The Portal reports the others with `{ source: \"ai-agent\", aiSdkSessionId }` plus the fields noted here. `ai_email_connected` means the user connected an email account. `ai_email_selected` means the user picked an email to check, and can repeat. `ai_email_searched` means the user searched their mailbox, adds `query` (masked by the Portal, at most 200 characters), `resultCount` (a whole number, 0 or more), and `suggested` (true when the query is the unchanged prefilled suggestion), and can repeat. `ai_email_rejected` means the check rejected an email, adds `reasonCode`, and can repeat. `ai_email_verified` means the agent verified an email, and adds `found` and `missing`.",
 										"enum": [
 											"billing_required",
 											"session_pending",
@@ -827,6 +828,7 @@ export const MCP_TOOLS = {
 											"ai_website_failed",
 											"ai_email_connected",
 											"ai_email_selected",
+											"ai_email_searched",
 											"ai_email_rejected",
 											"ai_email_verified"
 										]
@@ -947,10 +949,10 @@ export const MCP_TOOLS = {
 								"events": {
 									"type": "array",
 									"minItems": 1,
-									"maxItems": 60,
+									"maxItems": 65,
 									"items": {
 										"type": "string",
-										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md. The `ai_*` events belong to AI sessions and have phase `search`. The AI agent reports them through the Portal. Their `eventData` is `{ source: \"ai-agent\", aiSdkSessionId, field?, found?, missing? }`. `field`, `found`, and `missing` hold data point names, never values. `ai_search_started` means the agent began looking for the data points. `ai_field_found` means it found one, and `field` names it. `ai_search_completed` means it found every required one. `ai_search_failed` means it didn't, and `missing` names what it lacked.\nFive more `ai_*` events cover the email fallback. `ai_website_failed` is only for Builder: it records that the website attempt failed, with `{ source: \"builder\", aiSdkSessionId, status, reasonCode }`. The Portal reports the others with `{ source: \"ai-agent\", aiSdkSessionId }` plus the fields noted here. `ai_email_connected` means the user connected an email account. `ai_email_selected` means the user picked an email to check, and can repeat. `ai_email_rejected` means the check rejected an email, adds `reasonCode`, and can repeat. `ai_email_verified` means the agent verified an email, and adds `found` and `missing`.",
+										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md. The `ai_*` events belong to AI sessions and have phase `search`. The AI agent reports them through the Portal. Their `eventData` is `{ source: \"ai-agent\", aiSdkSessionId, field?, found?, missing? }`. `field`, `found`, and `missing` hold data point names, never values. `ai_search_started` means the agent began looking for the data points. `ai_field_found` means it found one, and `field` names it. `ai_search_completed` means it found every required one. `ai_search_failed` means it didn't, and `missing` names what it lacked.\nSix more `ai_*` events cover the email fallback. `ai_website_failed` is only for Builder: it records that the website attempt failed, with `{ source: \"builder\", aiSdkSessionId, status, reasonCode }`. The Portal reports the others with `{ source: \"ai-agent\", aiSdkSessionId }` plus the fields noted here. `ai_email_connected` means the user connected an email account. `ai_email_selected` means the user picked an email to check, and can repeat. `ai_email_searched` means the user searched their mailbox, adds `query` (masked by the Portal, at most 200 characters), `resultCount` (a whole number, 0 or more), and `suggested` (true when the query is the unchanged prefilled suggestion), and can repeat. `ai_email_rejected` means the check rejected an email, adds `reasonCode`, and can repeat. `ai_email_verified` means the agent verified an email, and adds `found` and `missing`.",
 										"enum": [
 											"billing_required",
 											"session_pending",
@@ -1010,6 +1012,7 @@ export const MCP_TOOLS = {
 											"ai_website_failed",
 											"ai_email_connected",
 											"ai_email_selected",
+											"ai_email_searched",
 											"ai_email_rejected",
 											"ai_email_verified"
 										]
@@ -1041,10 +1044,10 @@ export const MCP_TOOLS = {
 									"type": "array",
 									"description": "Events to keep. Defaults to every event.",
 									"minItems": 1,
-									"maxItems": 60,
+									"maxItems": 65,
 									"items": {
 										"type": "string",
-										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md. The `ai_*` events belong to AI sessions and have phase `search`. The AI agent reports them through the Portal. Their `eventData` is `{ source: \"ai-agent\", aiSdkSessionId, field?, found?, missing? }`. `field`, `found`, and `missing` hold data point names, never values. `ai_search_started` means the agent began looking for the data points. `ai_field_found` means it found one, and `field` names it. `ai_search_completed` means it found every required one. `ai_search_failed` means it didn't, and `missing` names what it lacked.\nFive more `ai_*` events cover the email fallback. `ai_website_failed` is only for Builder: it records that the website attempt failed, with `{ source: \"builder\", aiSdkSessionId, status, reasonCode }`. The Portal reports the others with `{ source: \"ai-agent\", aiSdkSessionId }` plus the fields noted here. `ai_email_connected` means the user connected an email account. `ai_email_selected` means the user picked an email to check, and can repeat. `ai_email_rejected` means the check rejected an email, adds `reasonCode`, and can repeat. `ai_email_verified` means the agent verified an email, and adds `found` and `missing`.",
+										"description": "Canonical Builder lifecycle event. Names use lower snake case; metadata uses camel case. Provider events include providerId, resolvedVersion, and ordinal. Request events also include requestId. New values are additive, so clients must tolerate unknown response values. For field requirements and funnel semantics, see docs/verification-analytics-events.md. The `ai_*` events belong to AI sessions and have phase `search`. The AI agent reports them through the Portal. Their `eventData` is `{ source: \"ai-agent\", aiSdkSessionId, field?, found?, missing? }`. `field`, `found`, and `missing` hold data point names, never values. `ai_search_started` means the agent began looking for the data points. `ai_field_found` means it found one, and `field` names it. `ai_search_completed` means it found every required one. `ai_search_failed` means it didn't, and `missing` names what it lacked.\nSix more `ai_*` events cover the email fallback. `ai_website_failed` is only for Builder: it records that the website attempt failed, with `{ source: \"builder\", aiSdkSessionId, status, reasonCode }`. The Portal reports the others with `{ source: \"ai-agent\", aiSdkSessionId }` plus the fields noted here. `ai_email_connected` means the user connected an email account. `ai_email_selected` means the user picked an email to check, and can repeat. `ai_email_searched` means the user searched their mailbox, adds `query` (masked by the Portal, at most 200 characters), `resultCount` (a whole number, 0 or more), and `suggested` (true when the query is the unchanged prefilled suggestion), and can repeat. `ai_email_rejected` means the check rejected an email, adds `reasonCode`, and can repeat. `ai_email_verified` means the agent verified an email, and adds `found` and `missing`.",
 										"enum": [
 											"billing_required",
 											"session_pending",
@@ -1104,6 +1107,7 @@ export const MCP_TOOLS = {
 											"ai_website_failed",
 											"ai_email_connected",
 											"ai_email_selected",
+											"ai_email_searched",
 											"ai_email_rejected",
 											"ai_email_verified"
 										]
