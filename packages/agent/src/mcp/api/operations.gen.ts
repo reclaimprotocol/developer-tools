@@ -1,4 +1,4 @@
-// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:4d1ee1f0aece).
+// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:5f9550b5303f).
 // Do not edit by hand: Reclaim regenerates this file upstream.
 // @ts-nocheck
 
