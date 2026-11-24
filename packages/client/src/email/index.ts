@@ -14,6 +14,11 @@ export {
 } from './verify.ts'
 export type { EmailProofV1 } from './core/contracts.ts'
 export {
+	buildEmailClaimContext,
+	emailSenderScoring,
+	type EmailSenderScoreReason,
+	type EmailSenderScoring,
+	type EmailSenderTrust,
 	EMAIL_PROVIDERS,
 	type EmailProvider,
 	type EmailRequest,

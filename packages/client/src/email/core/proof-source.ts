@@ -17,6 +17,7 @@ import type {
 } from './contracts.ts'
 import { canonicalJson, hashEmailPolicy, sha256 } from './policy.ts'
 import type { EmailRequest } from './protocol.ts'
+import { emailSenderScoring, type EmailSenderTrust } from './sender-trust.ts'
 
 /** No signer here: only Portal may authenticate this server-owned checked result. */
 export function buildCheckedEmailExtension(
@@ -76,6 +77,7 @@ export async function verifyEmailProofSource(
 	proof: EmailProofV1,
 	request: EmailRequest,
 	signal: AbortSignal,
+	trust?: EmailSenderTrust,
 ): Promise<void> {
 	const e = proof.emailProof
 	if(e.source.kind !== 'raw-rfc822-v1') {
@@ -123,8 +125,27 @@ export async function verifyEmailProofSource(
 			boundedDnsResolver,
 			undefined,
 			e.acceptedDkimSignature,
+			trust?.kind === 'scored'
+				? {
+					unlistedSender: {
+						excludedDomains: emailSenderScoring(request)?.excludedDomains ?? [],
+					},
+				}
+				: undefined,
 		)
 		const summary = inspectApprovedEmail(approved, binding)
+		// The issuer's trust claim must describe how this exact email was accepted.
+		const acceptance = summary.senderAcceptance
+		if(
+			trust?.kind === 'scored'
+				? acceptance.kind !== 'unlisted' ||
+					acceptance.signingDomain !== trust.signingDomain ||
+					acceptance.fromDomain !== trust.fromDomain
+				: acceptance.kind !== 'listed'
+		) {
+			throw new Error('EMAIL_SENDER_TRUST_MISMATCH')
+		}
+
 		if(
 			summary.timestampS !== proof.claimData.timestampS ||
 			canonicalJson(summary.sourceManifest) !== canonicalJson(e.sourceManifest)

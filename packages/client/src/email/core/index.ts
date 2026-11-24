@@ -30,9 +30,18 @@ export {
 } from './sender.ts'
 export {
 	approveEmailSnapshot,
+	type EmailApprovalOptions,
 	EmailApprovalError,
 	projectApprovedEmail,
 	inspectApprovedEmail,
 	copyApprovedRawEmail,
 	releaseApprovedEmail,
 } from './approval.ts'
+export {
+	buildEmailClaimContext,
+	emailSenderScoring,
+	type EmailSenderAcceptance,
+	type EmailSenderScoreReason,
+	type EmailSenderScoring,
+	type EmailSenderTrust,
+} from './sender-trust.ts'

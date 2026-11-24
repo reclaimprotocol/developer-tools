@@ -44,6 +44,12 @@ import {
 } from './policy.ts'
 import { matchesEmailDomain } from './sender.ts'
 import { matchesEmailSender, normalizeEmailMailbox } from './sender.ts'
+import {
+	emailDomainsAligned,
+	emailDomainUnder,
+	type EmailSenderAcceptance,
+	isPublicMailboxDomain,
+} from './sender-trust.ts'
 
 export class EmailApprovalError extends Error {
 	readonly code: string
@@ -108,12 +114,19 @@ function abortable<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
 	})
 }
 
+/** Opt in to accepting a sender the policy does not list; the caller must score the result. */
+export interface EmailApprovalOptions {
+	unlistedSender?: { excludedDomains: readonly string[] }
+}
+const UNLISTED_RETRY_CODES = new Set(['SIGNER_NOT_ACCEPTED', 'SENDER_NOT_ACCEPTED'])
+
 function claims(
 	headers: RawHeader[],
 	candidate: CoreDkimCandidate,
 	policy: NormalizedEmailPolicy,
 	binding: TrustedEmailBinding,
 	observer?: EmailCheckObserver,
+	unlisted?: { excludedDomains: readonly string[] },
 ) {
 	let step: EmailCheckStep = 'signed_headers'
 	try {
@@ -159,18 +172,28 @@ function claims(
 			},
 		})
 		step = 'sender'
-		if(
-			!policy.allowedDkimSigningDomains.some((domain) => matchesEmailDomain(domain, candidate.signature.signingDomain),
-			)
-		) {
-			reject('SIGNER_NOT_ACCEPTED')
-		}
-
 		const from = normalizeEmailMailbox(
 			exactlyOneMailbox(oneHeader(candidate.headers, 'from')),
 		)
-		if(!matchesEmailSender(policy.sender, from)) {
-			reject('SENDER_NOT_ACCEPTED')
+		let senderAcceptance: EmailSenderAcceptance = { kind: 'listed' }
+		if(unlisted) {
+			senderAcceptance = unlistedAcceptance(
+				headers,
+				candidate,
+				from,
+				unlisted.excludedDomains,
+			)
+		} else {
+			if(
+				!policy.allowedDkimSigningDomains.some((domain) => matchesEmailDomain(domain, candidate.signature.signingDomain),
+				)
+			) {
+				reject('SIGNER_NOT_ACCEPTED')
+			}
+
+			if(!matchesEmailSender(policy.sender, from)) {
+				reject('SENDER_NOT_ACCEPTED')
+			}
 		}
 
 		reportEmailCheck(observer, {
@@ -248,6 +271,7 @@ function claims(
 			to,
 			date,
 			timestampS,
+			senderAcceptance,
 			fromDisplay: display('from'),
 			toDisplay: display('to'),
 		}
@@ -260,6 +284,45 @@ function claims(
 		})
 		throw error
 	}
+}
+
+function unlistedAcceptance(
+	headers: RawHeader[],
+	candidate: CoreDkimCandidate,
+	from: string,
+	excludedDomains: readonly string[],
+): EmailSenderAcceptance {
+	const signingDomain = candidate.signature.signingDomain
+	const fromDomain = from.slice(from.indexOf('@') + 1)
+	if(!emailDomainsAligned(signingDomain, fromDomain)) {
+		reject('SENDER_NOT_ALIGNED')
+	}
+
+	if(
+		headers.filter((h) => h.name === 'subject').length !== 1 ||
+		candidate.headers.filter((h) => h.name === 'subject').length !== 1
+	) {
+		reject('SUBJECT_NOT_AUTHENTICATED')
+	}
+
+	if(isPublicMailboxDomain(signingDomain) || isPublicMailboxDomain(fromDomain)) {
+		reject('SIGNER_PUBLIC_MAILBOX')
+	}
+
+	if(
+		excludedDomains.some(
+			(excluded) => emailDomainUnder(signingDomain, excluded) ||
+				emailDomainUnder(fromDomain, excluded),
+		)
+	) {
+		reject('SIGNER_EXCLUDED')
+	}
+
+	const subject = decodeWords(oneHeader(candidate.headers, 'subject'))
+		.replace(/\s+/g, ' ')
+		.trim()
+		.slice(0, 300)
+	return { kind: 'unlisted', signingDomain, fromDomain, subject }
 }
 
 async function sources(
@@ -506,6 +569,7 @@ export async function approveWithResolver(
 	resolver: DnsResolver,
 	observer?: EmailCheckObserver,
 	acceptedSignature?: EmailProofV1['emailProof']['acceptedDkimSignature'],
+	options?: EmailApprovalOptions,
 ): Promise<ApprovedEmailContent> {
 	// Snapshot all caller-owned data synchronously, before DNS or any other await.
 	if(
@@ -565,79 +629,110 @@ export async function approveWithResolver(
 		}
 
 		let firstError: unknown
+		const unlistedRetry: CoreDkimCandidate[] = []
 		for(const candidate of passing) {
 			try {
-				const identity = claims(headers, candidate, policy, binding, observer)
-				const content = await sources(
-					raw,
-					candidate,
-					policy,
-					workSignal,
-					observer,
-				)
-				workSignal.throwIfAborted()
-				const handle = Object.freeze(
-					Object.create(null),
-				) as ApprovedEmailContent
-				const summary = freeze({
-					rawEmailSha256: sha256(raw),
-					...identity,
-					signature: candidate.signature,
-					dkim,
-					inventory: content.inventory,
-					contentScope: policy.contentScope,
-					textVersion: policy.textVersion,
-					sourceManifest: content.approved.map(
-						// eslint-disable-next-line @typescript-eslint/no-unused-vars
-						({ text: _text, pageRanges: _pages, ...manifest }) => manifest,
-					),
-				})
-				const projection = freeze({
-					params: policy.params,
-					instructions: policy.instructions,
-					contentScope: policy.contentScope,
-					sources: content.approved,
-				})
-				const dispose = () => {
-					raw.fill(0)
-					records.delete(handle)
-					signal.removeEventListener('abort', dispose)
-					clearTimeout(timer)
-				}
-
-				const timer = setTimeout(
-					dispose,
-					Math.min(binding.expiresAt - Date.now(), 2_147_483_647),
-				)
-				timer.unref()
-				signal.addEventListener('abort', dispose, { once: true })
-				records.set(handle, {
-					raw,
-					binding,
-					policy,
-					summary,
-					input: projection,
-					dispose,
-				})
-				retained = true
-				reportEmailCheck(observer, {
-					step: 'approval',
-					status: 'passed',
-					details: {
-						sources: content.approved.length,
-						signatureHeaderIndex: candidate.status.headerIndex,
-					},
-				})
-				return handle
+				return await approveCandidate(candidate)
 			} catch(error) {
 				firstError ??= error
+				if(workSignal.aborted) {
+					reject('EMAIL_APPROVAL_CANCELLED')
+				}
+
+				if(
+					options?.unlistedSender &&
+					error instanceof Error &&
+					UNLISTED_RETRY_CODES.has(error.message)
+				) {
+					unlistedRetry.push(candidate)
+				}
+			}
+		}
+
+		// Only when no candidate passed the listed checks: retry those that failed
+		// them on the sender, under the stricter unlisted gates.
+		let unlistedError: unknown
+		for(const candidate of unlistedRetry) {
+			try {
+				return await approveCandidate(candidate, options?.unlistedSender)
+			} catch(error) {
+				unlistedError ??= error
 				if(workSignal.aborted) {
 					reject('EMAIL_APPROVAL_CANCELLED')
 				}
 			}
 		}
 
+		firstError = unlistedError ?? firstError
 		throw firstError
+
+		async function approveCandidate(
+			candidate: CoreDkimCandidate,
+			unlisted?: { excludedDomains: readonly string[] },
+		) {
+			const identity = claims(headers, candidate, policy, binding, observer, unlisted)
+			const content = await sources(
+				raw,
+				candidate,
+				policy,
+				workSignal,
+				observer,
+			)
+			workSignal.throwIfAborted()
+			const handle = Object.freeze(
+				Object.create(null),
+			) as ApprovedEmailContent
+			const summary = freeze({
+				rawEmailSha256: sha256(raw),
+				...identity,
+				signature: candidate.signature,
+				dkim,
+				inventory: content.inventory,
+				contentScope: policy.contentScope,
+				textVersion: policy.textVersion,
+				sourceManifest: content.approved.map(
+					// eslint-disable-next-line @typescript-eslint/no-unused-vars
+					({ text: _text, pageRanges: _pages, ...manifest }) => manifest,
+				),
+			})
+			const projection = freeze({
+				params: policy.params,
+				instructions: policy.instructions,
+				contentScope: policy.contentScope,
+				sources: content.approved,
+			})
+			const dispose = () => {
+				raw.fill(0)
+				records.delete(handle)
+				signal.removeEventListener('abort', dispose)
+				clearTimeout(timer)
+			}
+
+			const timer = setTimeout(
+				dispose,
+				Math.min(binding.expiresAt - Date.now(), 2_147_483_647),
+			)
+			timer.unref()
+			signal.addEventListener('abort', dispose, { once: true })
+			records.set(handle, {
+				raw,
+				binding,
+				policy,
+				summary,
+				input: projection,
+				dispose,
+			})
+			retained = true
+			reportEmailCheck(observer, {
+				step: 'approval',
+				status: 'passed',
+				details: {
+					sources: content.approved.length,
+					signatureHeaderIndex: candidate.status.headerIndex,
+				},
+			})
+			return handle
+		}
 	} catch(error) {
 		const message = error instanceof Error ? error.message : ''
 		const code = signal.aborted
@@ -670,6 +765,7 @@ export function approveEmailSnapshot(
 	trustedBinding: TrustedEmailBinding,
 	signal: AbortSignal,
 	observer?: EmailCheckObserver,
+	options?: EmailApprovalOptions,
 ): Promise<ApprovedEmailContent> {
 	return approveWithResolver(
 		raw,
@@ -678,6 +774,8 @@ export function approveEmailSnapshot(
 		signal,
 		boundedDnsResolver,
 		observer,
+		undefined,
+		options,
 	)
 }
 

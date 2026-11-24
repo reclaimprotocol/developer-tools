@@ -139,6 +139,23 @@ describe('verifyEmailProof in signature mode', () => {
 			request: { ...request, context: { orderId: 'order-2' } },
 		}, /does not answer this request/)
 	})
+	it('rejects a DKIM signer that the request does not allow', async() => {
+		const request = emailRequest()
+		const proof = emailProof({
+			request,
+			editEmailProof(
+				email: { acceptedDkimSignature: { signingDomain: string } },
+			) {
+				email.acceptedDkimSignature.signingDomain = 'other.example'
+			},
+		})
+		await rejectsWith(
+			proof,
+			'email-proof-invalid',
+			{ trustedIssuers, request },
+			/signer is not allowed/,
+		)
+	})
 })
 
 describe('verifyEmailProof in full mode', () => {

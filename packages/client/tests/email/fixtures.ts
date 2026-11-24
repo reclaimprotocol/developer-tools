@@ -2,8 +2,10 @@ import { keccak_256 } from '@noble/hashes/sha3.js'
 import { createHash } from 'node:crypto'
 import type { EmailProofV1 } from '../../src/email/core/contracts.ts'
 import {
+	buildEmailClaimContext,
 	canonicalJson,
 	type EmailRequest,
+	type EmailSenderTrust,
 	normalizeEmailPolicy,
 } from '../../src/email/core/protocol.ts'
 import { bytesToHex } from '../../src/encoding.ts'
@@ -31,6 +33,10 @@ export interface EmailFixtureOptions {
 	issuedAtS?: number
 	signerKey?: string
 	request?: EmailRequest
+	/** The sender trust the issuer signs into the claim context. */
+	trust?: EmailSenderTrust
+	/** Replaces the signed claim context entirely. */
+	claimContext?: string
 	/** Changes the email proof before Portal signs its digest. */
 	editEmailProof?: (emailProof: EmailProofV1['emailProof']) => void
 }
@@ -125,11 +131,8 @@ export function emailProof(opts: EmailFixtureOptions = {}): EmailProofV1 {
 		consentVersion: 'full-email-v1',
 		...opts.parameters,
 	})
-	const context = canonicalJson({
-		...request.context,
-		reclaimSessionId: request.sessionId,
-		extractedParameters: extracted,
-	})
+	const context = opts.claimContext
+		?? buildEmailClaimContext(request, extracted, opts.trust)
 	const identifier = '0x' + bytesToHex(keccak_256(
 		new TextEncoder().encode(`email\n${parameters}\n${context}`),
 	))
