@@ -18,17 +18,27 @@ import { recoverEip191Address } from '../eip191.ts'
 import { bytesToHex } from '../encoding.ts'
 import type { EmailProofV1 } from './core/contracts.ts'
 import {
+	buildEmailClaimContext,
 	canonicalJson,
 	EMAIL_RESULT_TTL_S,
+	EMAIL_SENDER_TRUST_KEY,
 	emailProofParametersSchema,
 	type EmailProvider,
 	type EmailRequest,
 	emailRequestSchema,
+	emailSenderScoring,
+	type EmailSenderTrust,
+	emailSenderTrustSchema,
 	matchesEmailDomain,
 	plainCopy,
 	snapshotEmailProof,
 	strictJson,
 } from './core/protocol.ts'
+import {
+	emailDomainsAligned,
+	emailDomainUnder,
+	isPublicMailboxDomain,
+} from './core/sender-trust.ts'
 
 export type EmailVerificationMode = 'signature' | 'full'
 
@@ -70,6 +80,11 @@ export interface EmailProofOutcome {
 	authenticatedAddress: string
 	extractedParameters: Record<string, string>
 	emailCheck: EmailVerificationMode
+	/**
+	 * How the sender was trusted. Present only when the request opted in to
+	 * sender scoring: `listed` by the request policy, or `scored` by the issuer.
+	 */
+	senderTrust?: EmailSenderTrust
 }
 
 /** Minimum Bubblewrap release that `full` mode accepts. */
@@ -118,7 +133,7 @@ export async function verifyEmailProof(
 		{ ...opts, mode, trustedIssuers },
 	)
 	if(mode === 'full' && opts.request) {
-		await verifySource(snapshot, opts.request, signal)
+		await verifySource(snapshot, opts.request, signal, outcome.senderTrust)
 		if(opts.now === undefined) {
 			const { expiresAtS } = signedParameters(snapshot)
 			assert(
@@ -222,10 +237,9 @@ function verifyEmailProofSignature(
 	)
 	invalidUnless(now < parameters.expiresAtS, 'email proof expired')
 
-	if(opts.request) {
-		verifyRequestBinding(proof, parameters, opts.request, now)
-	}
-
+	const senderTrust = opts.request
+		? verifyRequestBinding(proof, parameters, opts.request, now)
+		: undefined
 	return {
 		issuer: signer,
 		emailProvider: parameters.emailProvider,
@@ -234,6 +248,7 @@ function verifyEmailProofSignature(
 		authenticatedAddress: email.authenticatedAddress,
 		extractedParameters: { ...proof.extractedParameterValues },
 		emailCheck: opts.mode,
+		...(senderTrust ? { senderTrust } : {}),
 	}
 }
 
@@ -243,7 +258,7 @@ function verifyRequestBinding(
 	parameters: ReturnType<typeof signedParameters>,
 	input: EmailRequest,
 	now: number,
-) {
+): EmailSenderTrust | undefined {
 	let request: EmailRequest
 	try {
 		request = emailRequestSchema.parse(plainCopy(input, -2))
@@ -268,23 +283,67 @@ function verifyRequestBinding(
 		&& parameters.emailProvider === request.provider,
 		'email proof does not answer this request',
 	)
+	let scoring: ReturnType<typeof emailSenderScoring>
+	let trust: EmailSenderTrust | undefined
+	let expectedContext: string
+	try {
+		scoring = emailSenderScoring(request)
+		if(scoring) {
+			trust = emailSenderTrustSchema.parse(
+				signedContext(proof)[EMAIL_SENDER_TRUST_KEY],
+			)
+		}
+
+		expectedContext = buildEmailClaimContext(
+			request,
+			proof.extractedParameterValues,
+			trust,
+		)
+	} catch{
+		throw emailError(
+			'email-proof-invalid',
+			'email proof sender trust is missing or malformed',
+		)
+	}
+
 	invalidUnless(
-		claim.context === canonicalJson({
-			...request.context,
-			reclaimSessionId: request.sessionId,
-			extractedParameters: proof.extractedParameterValues,
-		}),
+		claim.context === expectedContext,
 		'email proof context does not match the request',
 	)
-	// The issuer only signs an email whose DKIM signature passed for an
-	// allowed domain. Checking the signer here too means a proof whose
-	// signer the request never allowed fails in every mode.
+	// The issuer only signs an email whose DKIM signature passed. A listed
+	// signer must be one the request allowed, so a proof whose signer the
+	// request never allowed fails in every mode.
 	const { signingDomain } = proof.emailProof.acceptedDkimSignature
+	if(!scoring || !trust || trust.kind === 'listed') {
+		invalidUnless(
+			request.policy.allowedDkimSigningDomains
+				.some((pattern) => matchesEmailDomain(pattern, signingDomain)),
+			'email proof signer is not allowed by the request',
+		)
+		return trust
+	}
+
+	// A scored sender: the issuer vouches for an unlisted sender, within bounds
+	// the request set.
 	invalidUnless(
-		request.policy.allowedDkimSigningDomains
-			.some((pattern) => matchesEmailDomain(pattern, signingDomain)),
-		'email proof signer is not allowed by the request',
+		trust.score >= scoring.minScore,
+		'email proof sender score is below the request minimum',
 	)
+	invalidUnless(
+		trust.signingDomain === signingDomain
+		&& emailDomainsAligned(trust.signingDomain, trust.fromDomain),
+		'email proof sender does not match its signature',
+	)
+	invalidUnless(
+		!isPublicMailboxDomain(trust.signingDomain)
+		&& !isPublicMailboxDomain(trust.fromDomain)
+		&& !scoring.excludedDomains.some(
+			(excluded) => emailDomainUnder(trust.signingDomain, excluded)
+				|| emailDomainUnder(trust.fromDomain, excluded),
+		),
+		'email proof sender is not eligible for scoring',
+	)
+	return trust
 }
 
 /** DKIM, re-parse, sandboxed attachments, and evidence: `full` mode only. */
@@ -292,6 +351,7 @@ async function verifySource(
 	proof: EmailProofV1,
 	request: EmailRequest,
 	signal: AbortSignal,
+	trust?: EmailSenderTrust,
 ) {
 	const { verifyEmailProofSource } = await import('./core/proof-source.ts')
 		.catch((error: unknown) => {
@@ -303,7 +363,7 @@ async function verifySource(
 			)
 		})
 	try {
-		await verifyEmailProofSource(proof, request, signal)
+		await verifyEmailProofSource(proof, request, signal, trust)
 	} catch(error) {
 		if(signal.aborted) {
 			throw signal.reason

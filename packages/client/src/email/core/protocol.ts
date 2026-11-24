@@ -15,6 +15,7 @@ import {
 	emailTransportSchema,
 } from './providers.ts'
 import { normalizedEmailPolicySchema } from './schemas.ts'
+import { EMAIL_SENDER_TRUST_KEY, emailSenderScoring } from './sender-trust.ts'
 export {
 	EMAIL_PROVIDERS,
 	type EmailProvider,
@@ -29,6 +30,19 @@ export {
 	matchesEmailSender,
 	matchesEmailDomain,
 } from './sender.ts'
+export {
+	buildEmailClaimContext,
+	EMAIL_SENDER_SCORE_REASONS,
+	EMAIL_SENDER_SCORING_KEY,
+	EMAIL_SENDER_TRUST_KEY,
+	emailSenderScoring,
+	emailSenderScoringSchema,
+	emailSenderTrustSchema,
+	type EmailSenderAcceptance,
+	type EmailSenderScoreReason,
+	type EmailSenderScoring,
+	type EmailSenderTrust,
+} from './sender-trust.ts'
 export function canonicalJson(value: unknown): string {
 	return jcs(value, -4)
 }
@@ -262,6 +276,16 @@ export function validateEmailRequest(
 
 	if(r.context) {
 		plainCopy(r.context)
+		// Only the issuer adds a sender trust claim; a request cannot carry one.
+		if(EMAIL_SENDER_TRUST_KEY in r.context) {
+			throw new Error('INVALID_EMAIL_CONTEXT')
+		}
+
+		try {
+			emailSenderScoring(r)
+		} catch{
+			throw new Error('INVALID_EMAIL_SENDER_SCORING')
+		}
 	}
 
 	if(

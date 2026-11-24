@@ -143,7 +143,9 @@ describe('verifyEmailProof in signature mode', () => {
 		const request = emailRequest()
 		const proof = emailProof({
 			request,
-			editEmailProof(email) {
+			editEmailProof(
+				email: { acceptedDkimSignature: { signingDomain: string } },
+			) {
 				email.acceptedDkimSignature.signingDomain = 'other.example'
 			},
 		})

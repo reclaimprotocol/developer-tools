@@ -1010,6 +1010,33 @@ Neither the package root nor `/api` loads them; `verifyResultFull` loads
   `package.json`. When the host can't run it, `full` mode throws
   `email-full-verification-unavailable`; it never falls back to `signature`.
 
+#### Scored senders
+
+By default the email must come from a sender and DKIM signer your request
+lists. To also accept a sender you did not list, put
+`reclaimEmailSenderScoring` in the request `context`:
+
+```ts
+context: {
+  reclaimEmailSenderScoring: {
+    version: 1,
+    minScore: 0.8, // 0.5 to 1
+    brandDomains: ['example.com'], // up to 16 hostnames
+    excludedDomains: ['multi-tenant.example'], // up to 16; never scored
+  },
+}
+```
+
+The issuer then accepts an unlisted sender only if the DKIM signing domain and
+the From domain are aligned, the Subject is signed, neither is a public
+mailbox provider or an excluded domain, and the issuer scores the sender at or
+above `minScore`. DKIM must still pass in full; no score overrides that. The
+issuer adds `emailSenderTrust` to the signed context (`{ kind: 'listed' }` or
+`{ kind: 'scored', score, signingDomain, fromDomain, reason }`), and a request
+can't set that key itself. `verifyEmailProof` checks it against the request and
+returns it as `outcome.senderTrust`. `buildEmailClaimContext` builds the signed
+context for issuers and verifiers.
+
 Failures are Boom errors with a `reason` (also in `error.data.reason`):
 
 | `reason` | Status | Meaning |
