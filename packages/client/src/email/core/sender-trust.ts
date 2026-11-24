@@ -37,6 +37,10 @@ export const EMAIL_SENDER_SCORE_REASONS = [
 	'brand-label',
 	'brand-related',
 	'unrelated',
+	'brand-evidence',
+	'organizer-evidence',
+	'name-evidence',
+	'no-evidence',
 ] as const
 export type EmailSenderScoreReason = typeof EMAIL_SENDER_SCORE_REASONS[number]
 
@@ -62,6 +66,10 @@ export type EmailSenderAcceptance =
 		kind: 'unlisted'
 		signingDomain: string
 		fromDomain: string
+		/** The signed From mailbox, normalized. For the scorer only, never added to the proof. */
+		fromAddress: string
+		/** The signed, decoded From display name, at most 200 characters (may be empty). For the scorer only. */
+		fromName: string
 		/** The signed, decoded Subject, at most 300 characters. */
 		subject: string
 	}

@@ -322,7 +322,13 @@ function unlistedAcceptance(
 		.replace(/\s+/g, ' ')
 		.trim()
 		.slice(0, 300)
-	return { kind: 'unlisted', signingDomain, fromDomain, subject }
+	const fromName = decodeWords(
+		addressParser(oneHeader(candidate.headers, 'from'))[0]?.name || '',
+	)
+		.replace(/\s+/g, ' ')
+		.trim()
+		.slice(0, 200)
+	return { kind: 'unlisted', signingDomain, fromDomain, fromAddress: from, fromName, subject }
 }
 
 async function sources(
