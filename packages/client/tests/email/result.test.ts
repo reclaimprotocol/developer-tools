@@ -21,11 +21,18 @@ const ISS = 'https://builder.example'
 describe('email results from AI sessions', () => {
 	it('verifies an email entry with issuers from the Builder JWKS', async() => {
 		const request = emailRequest()
+		const proof = emailProof({ request })
 		const { fetch, calls } = builderJwks([ISSUER.address])
 		const { proofs } = await verifyResultFull(
-			signed(emailEntry(emailProof({ request }), request)),
+			signed(emailEntry(proof, request, {
+				senderTrust: { kind: 'platform' },
+				// The raw email has no Date header, so `sentAt` is left out.
+				dataPointSources: { from: 'email.sender', sentAt: 'email.date' },
+			})),
 			{ trustedIssuers: [ISS], fetchImpl: fetch, reclaimSessionId: 'rs-1' },
 		)
+		const context = JSON.parse(proof.claimData.context)
+		delete context.extractedParameters
 		assert.equal(calls.length, 1)
 		assert.equal(proofs?.length, 1)
 		assert.deepEqual(pick(proofs?.[0]), {
@@ -37,8 +44,31 @@ describe('email results from AI sessions', () => {
 			dkimSigner: 'shop.example',
 			authenticatedAddress: 'alice@gmail.com',
 			extractedParameters: { total: '12' },
+			emailFacts: {
+				sender: 'receipts@shop.example',
+				recipient: 'alice@gmail.com',
+				signingDomain: 'shop.example',
+			},
+			data: {
+				context,
+				extractedParameters: { total: '12', from: 'receipts@shop.example' },
+			},
+			senderTrust: { kind: 'platform' },
 			emailCheck: 'signature',
 		})
+	})
+
+	it('never lets an email fact replace an AI value', async() => {
+		const request = emailRequest()
+		const { proofs } = await verifyResultFull(
+			signed(emailEntry(emailProof({ request }), request, {
+				senderTrust: { kind: 'scored' },
+				dataPointSources: { total: 'email.recipient', to: 'email.other' },
+			})),
+			{ signerPublicKey: BUILDER.publicKey, emailIssuers: [ISSUER.address] },
+		)
+		assert.deepEqual(proofs?.[0]?.data?.extractedParameters, { total: '12' })
+		assert.equal(proofs?.[0]?.senderTrust, undefined)
 	})
 
 	it('trusts issuers passed in emailIssuers', async() => {
@@ -194,7 +224,11 @@ describe('email results from AI sessions', () => {
 	})
 })
 
-function emailEntry(proof: EmailProofV1, request: EmailRequest) {
+function emailEntry(
+	proof: EmailProofV1,
+	request: EmailRequest,
+	extra: Record<string, unknown> = {},
+) {
 	return {
 		requests: [{
 			request_id: 'email-1',
@@ -204,6 +238,7 @@ function emailEntry(proof: EmailProofV1, request: EmailRequest) {
 				provider: request.provider,
 				sender: request.policy.sender,
 				dkimSigner: proof.emailProof.acceptedDkimSignature.signingDomain,
+				...extra,
 				request,
 			},
 		}],

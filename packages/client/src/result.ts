@@ -14,7 +14,7 @@ import { sha256 } from '@noble/hashes/sha2.js'
 import { decrypt as eciesDecrypt, encrypt as eciesEncrypt } from 'eciesjs'
 import type { EmailProofV1 } from './email/core/contracts.ts'
 import type { EmailProvider, EmailRequest } from './email/core/protocol.ts'
-import type { EmailVerificationMode } from './email/verify.ts'
+import type { EmailFacts, EmailVerificationMode } from './email/verify.ts'
 import type { components } from './types/openapi.gen.ts'
 import type { DecryptionKey } from './enckeys.ts'
 import {
@@ -39,6 +39,7 @@ import type { TrustedData } from './proof-types.ts'
 import {
 	type ProofHashRequirement,
 	type ReclaimRequestProof,
+	trustedData,
 	verifyRequestProof,
 	type VerifyRequestProofOptions,
 } from './request-proof.ts'
@@ -360,11 +361,24 @@ export interface ResultProofOutcome {
 	dkimSigner?: string
 	/** Mailbox the user signed in with. */
 	authenticatedAddress?: string
-	/** Values extracted from the email. Trusted only when `proofValid`. */
+	/** Values the AI extracted from the email. Trusted only when
+	 *  `proofValid`. `data.extractedParameters` also has the email facts. */
 	extractedParameters?: Record<string, string>
+	/** The sender, recipient, date, and DKIM signing domain of the email.
+	 *  Trusted only when `proofValid`. */
+	emailFacts?: EmailFacts
+	/** How Builder trusted the email's sender. */
+	senderTrust?: ResultEmailSenderTrust
 	/** Which email verification ran. */
 	emailCheck?: EmailVerificationMode
 }
+
+/** Whose mail an email came from: the brand's own domain, the organizer's
+ *  mailbox on an event platform, a mailbox the prompt named, or a sender
+ *  the issuer scored as the brand's. */
+export type ResultEmailSenderTrust =
+	| { kind: 'brand' | 'platform' | 'prompt' }
+	| { kind: 'scored', score: number }
 
 export interface VerifyResultFullOutcome extends VerifyResultOutcome {
 	proofs?: ResultProofOutcome[]
@@ -876,9 +890,8 @@ export async function verifyResultFull(
 	async function verifyEmailEntries() {
 		// Loaded only for email results, so other results never load the
 		// email verifier.
-		const { normalizeEmailIssuers, verifyEmailProof } = await import(
-			'./email/index.ts'
-		)
+		const { emailProofFacts, normalizeEmailIssuers, verifyEmailProof } =
+			await import('./email/verify.ts')
 		const { snapshotEmailProof } = await import('./email/core/protocol.ts')
 		// Throws on a malformed `emailIssuers` entry: a configuration error,
 		// not a bad result.
@@ -909,13 +922,28 @@ export async function verifyResultFull(
 					continue
 				}
 
+				const emailProof = snapshotEmailProof(proof)
+				const facts = emailProofFacts(emailProof)
+				const data = trustedData(emailProof)
+				// An AI value wins over a fact of the same name.
+				data.extractedParameters = {
+					...factValues(email.dataPointSources, facts),
+					...data.extractedParameters,
+				}
 				outcome.proofValid = true
-				outcome.emailProof = snapshotEmailProof(proof)
+				outcome.emailProof = emailProof
 				outcome.emailProvider = verified.emailProvider
 				outcome.sender = verified.sender
 				outcome.dkimSigner = verified.dkimSigner
 				outcome.authenticatedAddress = verified.authenticatedAddress
 				outcome.extractedParameters = verified.extractedParameters
+				outcome.emailFacts = facts
+				outcome.data = data
+				const senderTrust = senderTrustOf(email.senderTrust)
+				if(senderTrust) {
+					outcome.senderTrust = senderTrust
+				}
+
 				outcome.emailCheck = verified.emailCheck
 			} catch(error) {
 				outcome.reason = emailFailureReason(error)
@@ -1036,6 +1064,8 @@ interface EmailEntryNames {
 	provider: unknown
 	sender: unknown
 	dkimSigner: unknown
+	senderTrust: unknown
+	dataPointSources: unknown
 	request: EmailRequest
 }
 
@@ -1055,9 +1085,50 @@ function emailEntryOf(email: unknown): EmailEntryNames | undefined {
 		provider: 'provider' in email ? email.provider : undefined,
 		sender: 'sender' in email ? email.sender : undefined,
 		dkimSigner: 'dkimSigner' in email ? email.dkimSigner : undefined,
+		senderTrust: 'senderTrust' in email ? email.senderTrust : undefined,
+		dataPointSources: 'dataPointSources' in email
+			? email.dataPointSources
+			: undefined,
 		// `verifyEmailProof` validates the request's shape before using it.
 		request: email.request as EmailRequest,
 	}
+}
+
+const EMAIL_FACT_SOURCES = new Map<unknown, keyof EmailFacts>([
+	['email.sender', 'sender'],
+	['email.recipient', 'recipient'],
+	['email.date', 'date'],
+	['email.signingDomain', 'signingDomain'],
+])
+
+/** Builder's `dataPointSources` (data point name to `email.*` source),
+ *  filled from the email's facts. */
+function factValues(sources: unknown, facts: EmailFacts) {
+	if(!sources || typeof sources !== 'object') {
+		return {}
+	}
+
+	return Object.fromEntries(Object.entries(sources).flatMap(([name, src]) => {
+		const key = EMAIL_FACT_SOURCES.get(src)
+		const value = key && facts[key]
+		return value ? [[name, value]] : []
+	}))
+}
+
+function senderTrustOf(trust: unknown): ResultEmailSenderTrust | undefined {
+	if(!trust || typeof trust !== 'object' || !('kind' in trust)) {
+		return undefined
+	}
+
+	const { kind } = trust
+	if(kind === 'brand' || kind === 'platform' || kind === 'prompt') {
+		return { kind }
+	}
+
+	return kind === 'scored' && 'score' in trust
+		&& typeof trust.score === 'number'
+		? { kind, score: trust.score }
+		: undefined
 }
 
 /** Whether the caller pinned which Reclaim proofs are acceptable. */

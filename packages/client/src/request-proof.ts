@@ -336,7 +336,9 @@ function assertSessionAndContext(
 	}
 }
 
-function trustedData(proof: ReclaimRequestProof): TrustedData {
+export function trustedData(
+	proof: Pick<ReclaimRequestProof, 'claimData'>,
+): TrustedData {
 	const context = contextFrom(proof)
 	const extractedParameters = isRecord(context.extractedParameters)
 		? Object.fromEntries(Object.entries(context.extractedParameters).map(
@@ -384,7 +386,9 @@ function normalized(value: string): string {
 	return value.trim().toLowerCase()
 }
 
-function contextFrom(proof: ReclaimRequestProof): Record<string, unknown> {
+function contextFrom(
+	proof: Pick<ReclaimRequestProof, 'claimData'>,
+): Record<string, unknown> {
 	const raw = proof.claimData.context
 	if(!raw) {
 		return {}
