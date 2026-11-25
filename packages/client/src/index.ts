@@ -26,6 +26,7 @@ export {
 	encryptForEthPublicKey,
 	type Jws,
 	ResultVerificationError,
+	type ResultEmailSenderTrust,
 	type ResultProofOutcome,
 	signResultJws,
 	verifyJwsSignature,

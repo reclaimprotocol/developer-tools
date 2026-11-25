@@ -806,11 +806,27 @@ replay prevention.
 
 An AI-session result can also carry email proofs. Each email entry in
 `results[].requests[]` has `method: 'email'`, an `email-v1` proof, and
-`email: { provider, sender, dkimSigner, request }`. `verifyResultFull` verifies
-it with [`verifyEmailProof`](#email-proofs) against the entry's `request`, and
-the outcome includes `method: 'email'`, `emailProvider`, `sender`,
-`dkimSigner`, `authenticatedAddress`, `extractedParameters`, and `emailCheck`.
-Two options control it:
+`email: { provider, sender, dkimSigner, senderTrust, dataPointSources?,
+request }`. `verifyResultFull` verifies it with
+[`verifyEmailProof`](#email-proofs) against the entry's `request`, and the
+outcome includes `method: 'email'`, `emailProvider`, `sender`, `dkimSigner`,
+`authenticatedAddress`, `extractedParameters` (the AI-extracted values), and
+`emailCheck`. A verified email entry also has:
+
+- `emailFacts`: `{ sender, recipient, date, signingDomain }` read from the
+  verified proof. `sender` is the `From` mailbox and `date` the `Date` header
+  as an ISO 8601 UTC string; each is omitted when its header is missing,
+  repeated, or unparsable. `recipient` is the signed-in mailbox.
+- `data: { context, extractedParameters }`, like a website entry. `context` is
+  the proof's signed claim context. `extractedParameters` holds the AI values
+  plus each data point that `email.dataPointSources` maps to an `email.sender`,
+  `email.recipient`, `email.date`, or `email.signingDomain` fact. An AI value
+  is never replaced by a fact.
+- `senderTrust`: how the result's issuer trusted the sender, copied from
+  `email.senderTrust`: `{ kind: 'brand' | 'platform' | 'prompt' }` or
+  `{ kind: 'scored', score }`.
+
+These options control it:
 
 - `emailVerification`: `'signature'` (default) or `'full'`. See
   [Email proofs](#email-proofs) for what each mode checks.
@@ -987,7 +1003,9 @@ console.log(outcome.authenticatedAddress, outcome.extractedParameters)
 
 The email entry points are server-only and need Node.js 22.19 or later.
 Neither the package root nor `/api` loads them; `verifyResultFull` loads
-`/email` only when a result contains an email proof.
+`/email` only when a result contains an email proof. For a result's email
+entry, it also returns the email's sender, recipient, date, and signing domain
+(see [`reclaim.results`](#reclaimresults)).
 
 `verifyEmailProof` has two modes:
 

@@ -1,4 +1,4 @@
-// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:a4ac08508dd7).
+// Generated from Builder's OpenAPI spec (https://build.reclaimprotocol.org/openapi.yaml, spec v0.1.0, source sha256:61c42bc6a2b7).
 // Do not edit by hand: Reclaim regenerates this file upstream.
 
 export const ROUTES = {

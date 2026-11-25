@@ -39,6 +39,12 @@ import {
 	emailDomainUnder,
 	isPublicMailboxDomain,
 } from './core/sender-trust.ts'
+import { parseSignedDate } from './lib/email/date.ts'
+import {
+	inspectHeaders,
+	oneHeader,
+	type RawHeader,
+} from './lib/email/headers.ts'
 
 export type EmailVerificationMode = 'signature' | 'full'
 
@@ -85,6 +91,19 @@ export interface EmailProofOutcome {
 	 * sender scoring: `listed` by the request policy, or `scored` by the issuer.
 	 */
 	senderTrust?: EmailSenderTrust
+}
+
+/** Facts a verified email proof carries. `sender` and `date` are omitted
+ *  when the `From` or `Date` header is missing, repeated, or unparsable. */
+export interface EmailFacts {
+	/** The `From` mailbox, lowercased. */
+	sender?: string
+	/** Mailbox the user signed in with. */
+	recipient: string
+	/** The `Date` header, as an ISO 8601 UTC string. */
+	date?: string
+	/** Domain of the DKIM signature that authenticated the email. */
+	signingDomain: string
 }
 
 /** Minimum Bubblewrap release that `full` mode accepts. */
@@ -249,6 +268,47 @@ function verifyEmailProofSignature(
 		extractedParameters: { ...proof.extractedParameterValues },
 		emailCheck: opts.mode,
 		...(senderTrust ? { senderTrust } : {}),
+	}
+}
+
+/**
+ * The facts of an email proof that {@link verifyEmailProof} accepted. The
+ * proof's digests bind the raw email, so its headers are read, not checked.
+ */
+export function emailProofFacts(proof: EmailProofV1): EmailFacts {
+	const email = proof.emailProof
+	const raw = Buffer.from(email.source.rawEmailBase64, 'base64')
+	let headers: RawHeader[] = []
+	try {
+		headers = inspectHeaders(raw)
+	} catch{
+		// Unparsable headers leave `sender` and `date` out.
+	} finally {
+		raw.fill(0)
+	}
+
+	const sender = read(() => {
+		const from = oneHeader(headers, 'from')
+		return (/<([^>]+)>/.exec(from)?.[1] ?? from)
+			.match(/[^\s<>@,;]+@[^\s<>@,;]+/)?.[0].toLowerCase()
+	})
+	const date = read(() => (
+		new Date(parseSignedDate(oneHeader(headers, 'date'))).toISOString()
+	))
+	return {
+		...(sender ? { sender } : {}),
+		recipient: email.authenticatedAddress,
+		...(date ? { date } : {}),
+		signingDomain: email.acceptedDkimSignature.signingDomain,
+	}
+}
+
+/** A missing, repeated, or unparsable header gives `undefined`. */
+function read(fn: () => string | undefined) {
+	try {
+		return fn()
+	} catch{
+		return undefined
 	}
 }
 
