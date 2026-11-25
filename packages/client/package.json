@@ -132,7 +132,7 @@
 		"mailauth": "7.1.0",
 		"mammoth": "1.13.0",
 		"pdfjs-dist": "6.4.299",
-		"postal-mime": "4.0.4",
+		"postal-mime": "4.0.8",
 		"read-excel-file": "9.3.12",
 		"sax": "1.4.3"
 	},
@@ -187,7 +187,7 @@
 		"mammoth": "1.13.0",
 		"openapi-typescript": "^7.13.0",
 		"pdfjs-dist": "6.4.299",
-		"postal-mime": "4.0.4",
+		"postal-mime": "4.0.8",
 		"read-excel-file": "9.3.12",
 		"sax": "1.4.3",
 		"typescript": "^5.9.0",
